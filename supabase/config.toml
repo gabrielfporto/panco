@@ -1,0 +1,14 @@
+project_id = "panco-personal"
+
+[auth]
+enable_signup = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["panco://"]
+
+# Os handlers validam JWT pelo getUser; webhook usa segredo de header.
+[functions.sync]
+verify_jwt = false
+[functions.pluggy-webhook]
+verify_jwt = false
+[functions.assistant]
+verify_jwt = false
