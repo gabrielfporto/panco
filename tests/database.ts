@@ -13,6 +13,7 @@ async function run() {
     "003_manual_and_recurring.sql",
     "004_consistency.sql",
     "005_profile.sql",
+    "20261007093914_ignore_automatic_redemptions.sql",
   ]) {
     await db.exec(
       await readFile(
@@ -372,6 +373,50 @@ async function run() {
   );
   console.log(
     "Conciliação manual de parcela e nova sincronização sem duplicidade OK",
+  );
+
+  // A separate currency isolates this regression from the existing BRL fixtures.
+  const filterAccount = await one<{ id: string }>(
+    `insert into accounts(user_id,name,kind,currency,current_balance,balance_as_of)
+     values ($1,'Filter test','checking','USD',1000,now()-interval '1 day') returning id`,
+    [u],
+  );
+  for (const [description, amount, direction, status] of [
+    ["RES APLIC AUT MAIS", 100, "income", "pending"],
+    ["prefix res  aplic aut mais 123", 200, "income", "posted"],
+    ["RES APLIC AUT MAIS", 300, "expense", "posted"],
+    ["Other income", 50, "income", "pending"],
+    ["Other expense", 20, "expense", "posted"],
+  ]) {
+    await db.query(
+      `insert into transactions(user_id,account_id,description,amount,direction,status,source,currency,occurred_at,due_date)
+      values ($1,$2,$3,$4,$5,$6,'manual','USD',now(),current_date)`,
+      [u, filterAccount.id, description, amount, direction, status],
+    );
+  }
+  await db.exec(
+    `set role authenticated;select set_config('request.jwt.claim.sub','${u}',false);`,
+  );
+  const filteredForecast = await one<{ value: Record<string, string> }>(
+    `select forecast_month(null,'USD') value`,
+  );
+  assert.equal(Number(filteredForecast.value.current_balance), 1000);
+  assert.equal(Number(filteredForecast.value.pending_income), 50);
+  assert.equal(Number(filteredForecast.value.pending_expenses), 20);
+  assert.equal(Number(filteredForecast.value.projected_balance), 1030);
+  const filteredSummary = await one<{
+    value: { amount: string; count: number };
+  }>(`select spending_summary(current_date-1,current_date+1,'','USD') value`);
+  assert.equal(Number(filteredSummary.value.amount), 20);
+  assert.equal(filteredSummary.value.count, 1);
+  const keptHistory = await one<{ n: number }>(
+    `select count(*)::int n from transactions where account_id=$1`,
+    [filterAccount.id],
+  );
+  assert.equal(keptHistory.n, 5);
+  await db.exec("reset role");
+  console.log(
+    "Filtro bancário: histórico preservado, saldo real intacto e totais/previsão excluídos OK",
   );
 
   await db.close();

@@ -13,7 +13,6 @@ import {
   Plus,
   RefreshCw,
   LogOut,
-  Menu,
   X,
   ArrowUpRight,
 } from "lucide-react";
@@ -55,19 +54,17 @@ const subtitles: Record<Feature, string> = {
 export function PancoApp() {
   const panco = usePanco(client),
     [feature, setFeature] = useState<Feature>("dashboard"),
-    [menu, setMenu] = useState(false),
     [editor, setEditor] = useState<{ type: string; id?: string } | null>(null),
     [demoEntered, setDemoEntered] = useState(false);
   const open = (type: string, id?: string) => setEditor({ type, id });
   const navigate = (f: Feature) => {
     setFeature(f);
-    setMenu(false);
   };
   if (!panco.session && !(panco.demo && demoEntered))
     return <Auth panco={panco} enterDemo={() => setDemoEntered(true)} />;
   return (
     <div className="app-shell">
-      <aside className={"sidebar " + (menu ? "open" : "")}>
+      <aside className="sidebar">
         <a
           className="logo"
           href="#"
@@ -83,6 +80,7 @@ export function PancoApp() {
           {nav.map((n) => (
             <button
               key={n.id}
+              aria-current={feature === n.id ? "page" : undefined}
               className={feature === n.id ? "active" : ""}
               onClick={() => navigate(n.id)}
             >
@@ -141,27 +139,22 @@ export function PancoApp() {
           </div>
         </div>
       </aside>
-      {menu && (
-        <button
-          className="menu-scrim"
-          aria-label="Fechar menu"
-          onClick={() => setMenu(false)}
-        />
-      )}
       <div className="main-shell">
         <header className="topbar">
           <div className="topbar-start">
-            <button
-              className="icon-button mobile-only"
-              aria-label="Abrir menu"
-              onClick={() => setMenu(!menu)}
-            >
-              <Menu size={22} />
-            </button>
             <span>{nav.find((n) => n.id === feature)?.label}</span>
             {panco.demo && <span className="demo-badge">DEMO</span>}
           </div>
           <div className="topbar-actions">
+            <button
+              className="icon-button mobile-only"
+              aria-label={panco.demo ? "Voltar ao login" : "Sair"}
+              onClick={() =>
+                panco.demo ? setDemoEntered(false) : void panco.logout()
+              }
+            >
+              <LogOut size={18} />
+            </button>
             <span className="month-caption">
               <CalendarDays size={16} />
               <span className="capitalize">{monthLabel(today())}</span>
@@ -260,6 +253,25 @@ export function PancoApp() {
           )}
         </main>
       </div>
+      <nav className="bottom-nav" aria-label="Navegação principal no celular">
+        {nav.map((n) => (
+          <button
+            key={n.id}
+            aria-current={feature === n.id ? "page" : undefined}
+            className={feature === n.id ? "active" : ""}
+            onClick={(event) => {
+              navigate(n.id);
+              event.currentTarget.scrollIntoView({
+                block: "nearest",
+                inline: "nearest",
+              });
+            }}
+          >
+            <n.icon size={21} aria-hidden="true" />
+            <span>{n.label}</span>
+          </button>
+        ))}
+      </nav>
       {editor?.type === "account" ? (
         <AddAccount panco={panco} close={() => setEditor(null)} />
       ) : (

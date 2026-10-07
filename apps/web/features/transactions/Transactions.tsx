@@ -1,22 +1,32 @@
-import { useState } from 'react';
-import { Search, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import type { PancoController } from '../../../../packages/react-features/src/use-panco';
-import { brl, shortDate } from '../shared/format';
+import { useState } from "react";
+import { Search, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import type { PancoController } from "../../../../packages/react-features/src/use-panco";
+import { brl, shortDate } from "../shared/format";
 export function Transactions({ panco }: { panco: PancoController }) {
-  const [query, setQuery] = useState(''),
-    [status, setStatus] = useState('all'),
-    [account, setAccount] = useState('all');
+  const [query, setQuery] = useState(""),
+    [status, setStatus] = useState("all"),
+    [account, setAccount] = useState("all");
   const { data } = panco;
   const rows = data.transactions
     .filter(
       (t) =>
-        `${t.description} ${t.merchant_name || ''}`.toLowerCase().includes(query.toLowerCase()) &&
-        (status === 'all' || t.status === status || (status === 'review' && t.needs_review)) &&
-        (account === 'all' || t.account_id === account || t.card_id === account),
+        `${t.description} ${t.merchant_name || ""}`
+          .toLowerCase()
+          .includes(query.toLowerCase()) &&
+        (status === "all" ||
+          t.status === status ||
+          (status === "review" && t.needs_review)) &&
+        (account === "all" ||
+          t.account_id === account ||
+          t.card_id === account),
     )
     .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   return (
     <section className="card">
+      <p className="transaction-filter-note">
+        Filtro ativo: RES APLIC AUT MAIS não aparece nas transações nem nos
+        totais e na previsão. O saldo informado pelo banco é mantido.
+      </p>
       <div className="filters">
         <label className="search">
           <Search size={18} />
@@ -27,7 +37,11 @@ export function Transactions({ panco }: { panco: PancoController }) {
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select
+          aria-label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
           <option value="all">Todos os status</option>
           <option value="pending">Pendentes</option>
           <option value="posted">Confirmadas</option>
@@ -65,7 +79,7 @@ export function Transactions({ panco }: { panco: PancoController }) {
                 <td>
                   <div className="table-name">
                     <span className="avatar-icon">
-                      {t.direction === 'income' ? (
+                      {t.direction === "income" ? (
                         <ArrowDownLeft size={18} />
                       ) : (
                         <ArrowUpRight size={18} />
@@ -78,9 +92,9 @@ export function Transactions({ panco }: { panco: PancoController }) {
                           ? `Parcela ${t.installment_number}/${t.total_installments}`
                           : t.description !== t.merchant_name
                             ? t.description
-                            : 'Pagamento único'}
-                        {t.defer_to_next_month ? ' · Próximo ciclo' : ''}
-                        {t.source === 'projection' ? ' · Projeção' : ''}
+                            : "Pagamento único"}
+                        {t.defer_to_next_month ? " · Próximo ciclo" : ""}
+                        {t.source === "projection" ? " · Projeção" : ""}
                       </small>
                     </div>
                   </div>
@@ -89,9 +103,11 @@ export function Transactions({ panco }: { panco: PancoController }) {
                   <select
                     className="category-select"
                     aria-label={`Categoria de ${t.description}`}
-                    value={t.category_id || ''}
+                    value={t.category_id || ""}
                     onChange={(e) =>
-                      panco.categorize(t.id, e.target.value).catch((e) => panco.setError(e.message))
+                      panco
+                        .categorize(t.id, e.target.value)
+                        .catch((e) => panco.setError(e.message))
                     }
                   >
                     <option value="" disabled>
@@ -110,27 +126,36 @@ export function Transactions({ panco }: { panco: PancoController }) {
                 </td>
                 <td>{shortDate(t.occurred_at)}</td>
                 <td>
-                  <span className={'tag ' + (t.status === 'posted' ? 'green' : '')}>
+                  <span
+                    className={"tag " + (t.status === "posted" ? "green" : "")}
+                  >
                     {t.needs_review
-                      ? 'Revisar'
-                      : { posted: 'Confirmada', pending: 'Pendente', cancelled: 'Cancelada' }[
-                          t.status
-                        ]}
+                      ? "Revisar"
+                      : {
+                          posted: "Confirmada",
+                          pending: "Pendente",
+                          cancelled: "Cancelada",
+                        }[t.status]}
                   </span>
                 </td>
                 <td
-                  className={'align-right amount ' + (t.direction === 'income' ? 'positive' : '')}
+                  className={
+                    "align-right amount " +
+                    (t.direction === "income" ? "positive" : "")
+                  }
                 >
-                  {t.direction === 'income' ? '+' : '−'} {brl(t.amount)}
+                  {t.direction === "income" ? "+" : "−"} {brl(t.amount)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {!rows.length && <p className="empty">Nenhum movimento encontrado com esses filtros.</p>}
+      {!rows.length && (
+        <p className="empty">Nenhum movimento encontrado com esses filtros.</p>
+      )}
       <div className="table-footer">
-        {rows.length} movimentos{' '}
+        {rows.length} movimentos{" "}
         <span>Alterar a categoria cria uma regra para o estabelecimento.</span>
       </div>
     </section>

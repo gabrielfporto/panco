@@ -8,6 +8,7 @@ import type {
 } from "./types.ts";
 import { demoData } from "./demo.ts";
 import { syncItems } from "./sync.ts";
+import { isIgnoredTransaction } from "../../core/src/features/transactions/visibility.ts";
 import { cents, decimal } from "../../core/src/money.ts";
 import { merchantKey } from "../../core/src/features/transactions/billing.ts";
 export type PancoController = ReturnType<typeof usePanco>;
@@ -41,14 +42,17 @@ export function usePanco(client: SupabaseClient | null) {
     [error, setError] = useState(""),
     [syncing, setSyncing] = useState(false);
   const displayed = useMemo(() => {
-    if (!demo) return data;
-    const income = data.transactions
+    const transactions = data.transactions.filter(
+      (t) => !isIgnoredTransaction(t),
+    );
+    if (!demo) return { ...data, transactions };
+    const income = transactions
       .filter(
         (t) =>
           t.account_id && t.status === "pending" && t.direction === "income",
       )
       .reduce((s, t) => s + cents(t.amount), 0n);
-    const expenses = data.transactions
+    const expenses = transactions
       .filter(
         (t) =>
           t.account_id && t.status === "pending" && t.direction === "expense",
@@ -63,6 +67,7 @@ export function usePanco(client: SupabaseClient | null) {
     );
     return {
       ...data,
+      transactions,
       forecast: {
         ...data.forecast,
         current_balance: decimal(balance),
@@ -339,7 +344,7 @@ export function usePanco(client: SupabaseClient | null) {
           ],
         };
       const term = lower.includes("ifood") ? "ifood" : "";
-      const rows = data.transactions.filter(
+      const rows = displayed.transactions.filter(
         (t) =>
           t.direction === "expense" &&
           t.source !== "projection" &&
@@ -418,17 +423,15 @@ export function usePanco(client: SupabaseClient | null) {
       setError("Conciliação de pagamento disponível com Supabase conectado.");
       return;
     }
-    const r = await client!
-      .from("invoice_payments")
-      .upsert(
-        {
-          user_id: session!.user.id,
-          invoice_id: invoiceId,
-          transaction_id: transactionId,
-          amount,
-        },
-        { onConflict: "invoice_id,transaction_id" },
-      );
+    const r = await client!.from("invoice_payments").upsert(
+      {
+        user_id: session!.user.id,
+        invoice_id: invoiceId,
+        transaction_id: transactionId,
+        amount,
+      },
+      { onConflict: "invoice_id,transaction_id" },
+    );
     if (r.error) throw r.error;
     await refresh();
   }
