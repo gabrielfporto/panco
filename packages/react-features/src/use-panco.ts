@@ -7,6 +7,7 @@ import type {
   ChatMessage,
 } from "./types.ts";
 import { demoData } from "./demo.ts";
+import { syncItems } from "./sync.ts";
 import { cents, decimal } from "../../core/src/money.ts";
 import { merchantKey } from "../../core/src/features/transactions/billing.ts";
 export type PancoController = ReturnType<typeof usePanco>;
@@ -307,23 +308,12 @@ export function usePanco(client: SupabaseClient | null) {
         throw new Error(
           "Use Adicionar conta para cadastrar um Item ID ou criar uma conta manual.",
         );
-      for (const itemId of items) {
-        const { accounts } = await invoke({ itemId, register });
+      try {
+        await syncItems(invoke, items, register);
+      } finally {
+        // Load committed data even when another resource failed.
         await refresh();
-        for (const account of accounts) {
-          if (account.type === "CREDIT")
-            await invoke({ itemId, accountId: account.id, bills: true });
-          let more = true;
-          for (let page = 0; more && page < 100; page++)
-            more = (await invoke({ itemId, accountId: account.id })).more;
-          if (more)
-            throw new Error(
-              "Importação parcial salva. Sincronize novamente para continuar.",
-            );
-        }
-        await invoke({ itemId, investments: true });
       }
-      await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao sincronizar.");
       if (onlyItem) throw e;
