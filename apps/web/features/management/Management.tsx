@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CreditCard,
   Plus,
@@ -19,6 +20,15 @@ export function Management({
   open: (type: string, id?: string) => void;
 }) {
   const d = panco.data;
+  const [showZero, setShowZero] = useState(false);
+  const visibleInvestments = d.investments.filter(
+    (i) => showZero || i.current_value == null || Number(i.current_value) !== 0,
+  );
+  const zeroCount =
+    d.investments.length -
+    d.investments.filter(
+      (i) => i.current_value == null || Number(i.current_value) !== 0,
+    ).length;
   if (feature === "cards")
     return (
       <>
@@ -298,14 +308,29 @@ export function Management({
           <section className="card">
             <div className="section-top">
               <h2>Seus investimentos</h2>
+              <label className="toggle-label">
+                <input
+                  type="checkbox"
+                  checked={showZero}
+                  onChange={(e) => setShowZero(e.target.checked)}
+                />{" "}
+                Mostrar posições zeradas ({zeroCount})
+              </label>
             </div>
-            {d.investments.map((i) => (
+            {visibleInvestments.map((i) => (
               <div className="movement" key={i.id}>
                 <span className="avatar-icon">
                   <Landmark size={19} />
                 </span>
                 <div className="grow">
                   <strong>{i.name}</strong>
+                  <small>
+                    Aplicação{" "}
+                    {i.pluggy_investment_id?.slice(-6) || i.id.slice(-6)}
+                    {i.valued_at
+                      ? " · Atualizada em " + shortDate(i.valued_at)
+                      : ""}
+                  </small>
                   <small>
                     {
                       {
@@ -325,8 +350,11 @@ export function Management({
                 </b>
               </div>
             ))}
-            {!d.investments.length && (
-              <p className="empty">Sincronize para carregar suas posições.</p>
+            {!visibleInvestments.length && (
+              <p className="empty">
+                Nenhuma posição com saldo disponível. Sincronize ou mostre as
+                posições zeradas.
+              </p>
             )}
           </section>
           <section className="card">

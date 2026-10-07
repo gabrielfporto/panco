@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
+  Target,
   CalendarDays,
   ArrowLeftRight,
   CreditCard,
@@ -19,6 +20,7 @@ import {
 import { usePanco } from "../../../../packages/react-features/src/use-panco";
 import type { Feature } from "../../../../packages/react-features/src/types";
 import { Reconciliation } from "../transactions/Reconciliation";
+import { Planning } from "../planning/Planning";
 import { Dashboard } from "../dashboard/Dashboard";
 import { Transactions } from "../transactions/Transactions";
 import { Calendar } from "../calendar/Calendar";
@@ -33,6 +35,7 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
 const client = url && key ? createClient(url, key) : null;
 const nav = [
   { id: "dashboard", label: "Visão geral", icon: LayoutDashboard },
+  { id: "planning", label: "Planejamento", icon: Target },
   { id: "calendar", label: "Calendário", icon: CalendarDays },
   { id: "transactions", label: "Transações", icon: ArrowLeftRight },
   { id: "cards", label: "Contas e cartões", icon: CreditCard },
@@ -43,6 +46,7 @@ const nav = [
 ] as const;
 const subtitles: Record<Feature, string> = {
   dashboard: "",
+  planning: "Estime suas receitas e despesas, categoria por categoria.",
   calendar: "O que aconteceu. O que está por vir.",
   transactions: "Cada movimento, no seu lugar.",
   cards: "Suas contas e seus próximos ciclos.",
@@ -244,6 +248,7 @@ export function PancoApp() {
                   <Reconciliation panco={panco} />
                 </>
               )}{" "}
+              {feature === "planning" && <Planning panco={panco} />}
               {feature === "calendar" && <Calendar panco={panco} />}{" "}
               {feature === "assistant" && <Assistant panco={panco} />}{" "}
               {["cards", "subscriptions", "categories", "investments"].includes(
@@ -257,6 +262,8 @@ export function PancoApp() {
         {nav.map((n) => (
           <button
             key={n.id}
+            title={n.label}
+            aria-label={n.label}
             aria-current={feature === n.id ? "page" : undefined}
             className={feature === n.id ? "active" : ""}
             onClick={(event) => {

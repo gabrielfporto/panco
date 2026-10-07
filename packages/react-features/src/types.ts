@@ -1,5 +1,6 @@
 export type Money = string | number;
 export interface Account {
+  archived_at?: string | null;
   pluggy_account_id?: string | null;
   id: string;
   name: string;
@@ -73,6 +74,9 @@ export interface Subscription {
   card_id: string | null;
 }
 export interface Investment {
+  pluggy_investment_id?: string | null;
+  valued_at?: string | null;
+  currency?: string;
   id: string;
   name: string;
   asset_class: string;
@@ -99,7 +103,15 @@ export interface Forecast {
   as_of: string | null;
   through: string;
 }
+export interface Budget {
+  id?: string;
+  month: string;
+  category_id: string;
+  direction: "income" | "expense";
+  amount: Money;
+}
 export interface PancoData {
+  budgets?: Budget[];
   accounts: Account[];
   cards: Card[];
   categories: Category[];
@@ -126,6 +138,7 @@ export interface ChatMessage {
   cards?: AssistantCard[];
 }
 export type Feature =
+  | "planning"
   | "dashboard"
   | "calendar"
   | "transactions"

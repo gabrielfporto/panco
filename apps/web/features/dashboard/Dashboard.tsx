@@ -5,10 +5,12 @@ import {
   Wallet,
   CalendarDays,
   Sparkles,
-} from 'lucide-react';
-import type { PancoController } from '../../../../packages/react-features/src/use-panco';
-import type { Feature } from '../../../../packages/react-features/src/types';
-import { brl, shortDate, today } from '../shared/format';
+} from "lucide-react";
+import type { PancoController } from "../../../../packages/react-features/src/use-panco";
+import type { Feature } from "../../../../packages/react-features/src/types";
+import { AccountLogo } from "../shared/AccountLogo";
+import { cents, decimal } from "../../../../packages/core/src/money";
+import { brl, shortDate, today, monthLabel } from "../shared/format";
 export function Dashboard({
   panco,
   navigate,
@@ -18,40 +20,50 @@ export function Dashboard({
 }) {
   const { data } = panco;
   const f = data.forecast;
+  const bankAccounts = data.accounts.filter(
+    (a) => !a.archived_at && a.kind !== "investment" && a.currency === "BRL",
+  );
+  const currentTotal = decimal(
+    bankAccounts.reduce((sum, a) => sum + cents(a.current_balance), 0n),
+  );
   const actual = data.transactions.filter(
     (t) =>
-      t.source !== 'projection' &&
-      t.status !== 'cancelled' &&
-      t.kind === 'regular' &&
+      t.source !== "projection" &&
+      t.status !== "cancelled" &&
+      t.kind === "regular" &&
       t.occurred_at.startsWith(today().slice(0, 7)),
   );
   const income = actual
-      .filter((t) => t.direction === 'income')
+      .filter((t) => t.direction === "income")
       .reduce((s, t) => s + Number(t.amount), 0),
     expense = actual
-      .filter((t) => t.direction === 'expense')
+      .filter((t) => t.direction === "expense")
       .reduce((s, t) => s + Number(t.amount), 0);
   const percent = income + expense ? (income / (income + expense)) * 100 : 0;
   const upcoming = [
     ...data.transactions
-      .filter((t) => t.account_id && t.status === 'pending')
+      .filter((t) => t.account_id && t.status === "pending")
       .map((t) => ({
         id: t.id,
         name: t.description,
         date: t.due_date || t.occurred_at,
         amount: t.amount,
-        income: t.direction === 'income',
-        label: 'Conta bancária',
+        income: t.direction === "income",
+        label: "Conta bancária",
       })),
     ...data.invoices
       .filter((i) => Number(i.remaining_due) > 0)
       .map((i) => ({
         id: i.id,
-        name: 'Fatura · ' + (data.cards.find((c) => c.id === i.card_id)?.name || 'Cartão'),
+        name:
+          "Fatura · " +
+          (data.cards.find((c) => c.id === i.card_id)?.name || "Cartão"),
         date: i.due_date,
         amount: i.remaining_due,
         income: false,
-        label: 'Cartão de crédito',
+        label:
+          (i.due_date < today() ? "Vencida · " : "Fatura de ") +
+          monthLabel(i.due_date),
       })),
   ]
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -60,7 +72,9 @@ export function Dashboard({
     <>
       <div className="welcome">
         <div>
-          <span className="eyebrow">UM POUCO MAIS DE CLAREZA, TODOS OS DIAS</span>
+          <span className="eyebrow">
+            UM POUCO MAIS DE CLAREZA, TODOS OS DIAS
+          </span>
           <h1>
             Seu dinheiro.
             <br className="mobile-only" /> Mais possibilidades.
@@ -73,15 +87,40 @@ export function Dashboard({
         <section className="card projection">
           <div className="card-eyebrow">
             <span>
-              <Wallet size={17} /> Saldo projetado
+              <Wallet size={17} /> Saldo atual nas contas
             </span>
-            <span className="light-tag">FIM DO MÊS</span>
+            <span className="light-tag">AGORA · BRL</span>
           </div>
-          <div className="hero-number">{brl(f.projected_balance)}</div>
-          <p>Depois de tudo o que está por vir.</p>
+          <div className="hero-number">{brl(currentTotal)}</div>
+          <p>
+            Total das contas em reais, sem somar investimentos ou limite de
+            cartão.
+          </p>
+          <div className="account-balances">
+            {bankAccounts.map((a) => (
+              <div className="account-balance" key={a.id}>
+                <AccountLogo name={a.name} />
+                <span>
+                  <strong>{a.name}</strong>
+                  <small>
+                    {{
+                      checking: "Conta corrente",
+                      savings: "Poupança",
+                      cash: "Dinheiro",
+                      other: "Outra conta",
+                    }[a.kind] || a.kind}
+                  </small>
+                </span>
+                <b className={Number(a.current_balance) < 0 ? "negative" : ""}>
+                  {brl(a.current_balance)}
+                </b>
+              </div>
+            ))}
+          </div>
+          {!bankAccounts.length && <p>Nenhuma conta cadastrada.</p>}
           <div className="projection-footer">
             <span>
-              Saldo atual <b>{brl(f.current_balance)}</b>
+              Previsão ao fim do mês <b>{brl(f.projected_balance)}</b>
             </span>
             <ArrowUpRight size={25} />
           </div>
@@ -91,7 +130,7 @@ export function Dashboard({
             <ArrowDownLeft size={22} />
           </div>
           <span>Receitas a receber</span>
-          <strong>{brl(f.pending_income)}</strong>
+          <strong className="positive">{brl(f.pending_income)}</strong>
           <small>Até o fim do mês</small>
         </section>
         <section className="card metric">
@@ -99,15 +138,18 @@ export function Dashboard({
             <ArrowUpRight size={22} />
           </div>
           <span>Despesas + faturas</span>
-          <strong>{brl(Number(f.pending_expenses) + Number(f.invoices_due))}</strong>
+          <strong className="negative">
+            {brl(Number(f.pending_expenses) + Number(f.invoices_due))}
+          </strong>
           <small>Faturas: {brl(f.invoices_due)}</small>
         </section>
       </div>
       {(f.review_count > 0 || f.missing_balance_count > 0) && (
         <div className="notice">
-          Há dados para revisar: {f.review_count} lançamentos e {f.missing_balance_count} saldos sem
-          data. A previsão pode estar incompleta.{' '}
-          <button onClick={() => navigate('transactions')}>Revisar</button>
+          Há dados para revisar: {f.review_count} lançamentos e{" "}
+          {f.missing_balance_count} saldos sem data. A previsão pode estar
+          incompleta.{" "}
+          <button onClick={() => navigate("transactions")}>Revisar</button>
         </div>
       )}
       <div className="dashboard-grid">
@@ -120,7 +162,7 @@ export function Dashboard({
             <div
               className="donut"
               style={{
-                background: `conic-gradient(#0F3B2E 0 ${percent}%, #D7DDCE ${percent}% 100%)`,
+                background: `conic-gradient(#16805d 0 ${percent}%, #d34e59 ${percent}% 100%)`,
               }}
               role="img"
               aria-label={`Receitas ${brl(income)}, despesas ${brl(expense)}`}
@@ -151,7 +193,10 @@ export function Dashboard({
         <section className="card">
           <div className="section-top">
             <h2>Próximos passos</h2>
-            <button className="text-button" onClick={() => navigate('calendar')}>
+            <button
+              className="text-button"
+              onClick={() => navigate("calendar")}
+            >
               Calendário <ArrowRight size={15} />
             </button>
           </div>
@@ -161,14 +206,14 @@ export function Dashboard({
                 <div className="due-row" key={t.id}>
                   <div className="date-tile">
                     <b>{t.date.slice(8, 10)}</b>
-                    <small>{shortDate(t.date).split(' ')[2]}</small>
+                    <small>{shortDate(t.date).split(" ")[2]}</small>
                   </div>
                   <div className="grow">
                     <strong>{t.name}</strong>
                     <small>{t.label}</small>
                   </div>
-                  <span className={t.income ? 'positive' : ''}>
-                    {t.income ? '+ ' : ''}
+                  <span className={t.income ? "positive" : "negative"}>
+                    {t.income ? "+ " : ""}
                     {brl(t.amount)}
                   </span>
                 </div>
@@ -183,12 +228,15 @@ export function Dashboard({
         <section className="card">
           <div className="section-top">
             <h2>Últimos movimentos</h2>
-            <button className="text-button" onClick={() => navigate('transactions')}>
+            <button
+              className="text-button"
+              onClick={() => navigate("transactions")}
+            >
               Ver todos <ArrowRight size={15} />
             </button>
           </div>
           {actual
-            .filter((t) => t.status === 'posted')
+            .filter((t) => t.status === "posted")
             .slice()
             .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
             .slice(0, 4)
@@ -200,12 +248,15 @@ export function Dashboard({
                 <div className="grow">
                   <strong>{t.merchant_name || t.description}</strong>
                   <small>
-                    {data.categories.find((c) => c.id === t.category_id)?.name || 'Sem categoria'} ·{' '}
-                    {shortDate(t.occurred_at)}
+                    {data.categories.find((c) => c.id === t.category_id)
+                      ?.name || "Sem categoria"}{" "}
+                    · {shortDate(t.occurred_at)}
                   </small>
                 </div>
-                <b className={t.direction === 'income' ? 'positive' : ''}>
-                  {t.direction === 'income' ? '+' : '−'} {brl(t.amount)}
+                <b
+                  className={t.direction === "income" ? "positive" : "negative"}
+                >
+                  {t.direction === "income" ? "+" : "−"} {brl(t.amount)}
                 </b>
               </div>
             ))}
@@ -219,7 +270,7 @@ export function Dashboard({
             Uma visão mais clara.
           </h2>
           <p>“Quanto gastei com alimentação este mês?”</p>
-          <button onClick={() => navigate('assistant')}>
+          <button onClick={() => navigate("assistant")}>
             Vamos conversar <ArrowUpRight size={17} />
           </button>
           <div className="teaser-flower">✳</div>
@@ -227,12 +278,14 @@ export function Dashboard({
       </div>
       <footer className="page-footer">
         <span>
-          <span className="status-dot" />{' '}
+          <span className="status-dot" />{" "}
           {panco.demo
-            ? 'Dados de exemplo · demonstração'
-            : `Saldo atualizado: ${f.as_of ? shortDate(f.as_of) : 'ainda não informado'}`}
+            ? "Dados de exemplo · demonstração"
+            : `Saldo atualizado: ${f.as_of ? shortDate(f.as_of) : "ainda não informado"}`}
         </span>
-        <span>Menos ruído. Mais cuidado.</span>
+        <a href="https://www.logo.dev" target="_blank" rel="noreferrer">
+          Logos por Logo.dev
+        </a>
       </footer>
     </>
   );

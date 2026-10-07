@@ -14,6 +14,7 @@ async function run() {
     "004_consistency.sql",
     "005_profile.sql",
     "20261007093914_ignore_automatic_redemptions.sql",
+    "20261007232440_monthly_category_planning.sql",
   ]) {
     await db.exec(
       await readFile(
@@ -419,6 +420,47 @@ async function run() {
     "Filtro bancário: histórico preservado, saldo real intacto e totais/previsão excluídos OK",
   );
 
+  const budgetCategory = await one<{ id: string }>(
+    `select id from categories where user_id=$1 limit 1`,
+    [u],
+  );
+  await db.exec(
+    `set role authenticated;select set_config('request.jwt.claim.sub','${u}',false);`,
+  );
+  await db.query(
+    `insert into monthly_budgets(user_id,month,category_id,direction,amount) values($1,'2026-10-01',$2,'income',123.45)`,
+    [u, budgetCategory.id],
+  );
+  await db.query(
+    `insert into monthly_budgets(user_id,month,category_id,direction,amount) values($1,'2026-10-01',$2,'income',200.50) on conflict(user_id,month,category_id,direction) do update set amount=excluded.amount`,
+    [u, budgetCategory.id],
+  );
+  assert.equal(
+    (await one<{ amount: string }>(`select amount from monthly_budgets`))
+      .amount,
+    "200.50",
+  );
+  await assert.rejects(
+    db.query(
+      `insert into monthly_budgets(user_id,month,category_id,direction,amount) values($1,'2026-11-01',$2,'expense',-1)`,
+      [u, budgetCategory.id],
+    ),
+  );
+  await db.exec(`select set_config('request.jwt.claim.sub','${v}',false);`);
+  assert.equal(
+    (await one<{ n: number }>(`select count(*)::int n from monthly_budgets`)).n,
+    0,
+  );
+  await assert.rejects(
+    db.query(
+      `insert into monthly_budgets(user_id,month,category_id,direction,amount) values($1,'2026-11-01',$2,'expense',10)`,
+      [u, budgetCategory.id],
+    ),
+  );
+  await db.exec("reset role");
+  console.log(
+    "Planejamento: gravação, atualização, valores não negativos e isolamento RLS OK",
+  );
   await db.close();
   console.log("Todos os testes PostgreSQL passaram.");
 }

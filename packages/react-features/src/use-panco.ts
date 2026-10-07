@@ -5,6 +5,7 @@ import type {
   AssistantCard,
   Transaction,
   ChatMessage,
+  Budget,
 } from "./types.ts";
 import { demoData } from "./demo.ts";
 import { syncItems } from "./sync.ts";
@@ -91,6 +92,7 @@ export function usePanco(client: SupabaseClient | null) {
         "subscriptions",
         "investments",
         "investment_income",
+        "monthly_budgets",
       ] as const;
       const entries = await Promise.all(
         tables.map(async (table) => {
@@ -104,7 +106,11 @@ export function usePanco(client: SupabaseClient | null) {
             const { data, error } = await q;
             if (error) throw error;
             rows.push(...data);
-            if (data.length < 1000) return [table, rows] as const;
+            if (data.length < 1000)
+              return [
+                table === "monthly_budgets" ? "budgets" : table,
+                rows,
+              ] as const;
           }
           throw new Error(
             "Limite local de 100 mil registros; reduza o período.",
@@ -155,6 +161,42 @@ export function usePanco(client: SupabaseClient | null) {
       void client.removeChannel(channel);
     };
   }, [client, session, refresh]);
+  async function saveBudget(
+    month: string,
+    rows: Omit<Budget, "month" | "id">[],
+  ) {
+    if (!/^\d{4}-\d{2}-01$/.test(month)) throw new Error("Mês inválido.");
+    const budgets = rows.map((row) => {
+      const amount = cents(row.amount);
+      if (amount < 0n)
+        throw new Error("Use valores estimados iguais ou maiores que zero.");
+      return { ...row, month, amount: decimal(amount) };
+    });
+    if (demo) {
+      setData((d) => ({
+        ...d,
+        budgets: [
+          ...(d.budgets || []).filter((b) => b.month !== month),
+          ...budgets,
+        ],
+      }));
+      return;
+    }
+    if (budgets.length) {
+      const { error } = await client!.from("monthly_budgets").upsert(
+        budgets.map((row) => ({ ...row, user_id: session!.user.id })),
+        { onConflict: "user_id,month,category_id,direction" },
+      );
+      if (error) throw error;
+    }
+    setData((d) => ({
+      ...d,
+      budgets: [
+        ...(d.budgets || []).filter((b) => b.month !== month),
+        ...budgets,
+      ],
+    }));
+  }
   async function login(email: string, password: string) {
     if (!client) return;
     const r = await client.auth.signInWithPassword({ email, password });
@@ -446,6 +488,7 @@ export function usePanco(client: SupabaseClient | null) {
     login,
     signup,
     createAccount,
+    saveBudget,
     logout,
     refresh,
     save,

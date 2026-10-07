@@ -1,12 +1,12 @@
 export const pancoTokens = {
   colors: {
-    background: '#FAF9F6',
-    surface: '#FFFFFF',
-    forest: '#0F3B2E',
-    ink: '#223A30',
-    muted: '#7D827A',
-    sage: '#D7DDCE',
+    background: "#F5F7FB",
+    surface: "#FFFFFF",
+    forest: "#334F92",
+    ink: "#233047",
+    muted: "#6B7280",
+    sage: "#E4E9F3",
   },
   radius: { card: 18, large: 24, control: 9 },
-  fonts: { heading: 'Playfair Display', body: 'Inter' },
+  fonts: { heading: "Playfair Display", body: "Inter" },
 } as const;
