@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import type {
   PancoData,
@@ -17,6 +17,7 @@ export function usePanco(client: SupabaseClient | null) {
   const demo = !client;
   const empty = (): PancoData => ({
     ...demoData(),
+    budgets: [],
     accounts: [],
     cards: [],
     categories: [],
@@ -42,6 +43,15 @@ export function usePanco(client: SupabaseClient | null) {
     [loading, setLoading] = useState(!!client),
     [error, setError] = useState(""),
     [syncing, setSyncing] = useState(false);
+  // Keep the visible cache while revalidating; isolate responses by login and request.
+  const cache = useRef({
+    userId: "",
+    generation: 0,
+    request: 0,
+    loaded: false,
+  });
+  const pendingCategories = useRef(new Map<string, string>());
+  const [savingCategories, setSavingCategories] = useState<string[]>([]);
   const displayed = useMemo(() => {
     const transactions = data.transactions.filter(
       (t) => !isIgnoredTransaction(t),
@@ -80,8 +90,13 @@ export function usePanco(client: SupabaseClient | null) {
     };
   }, [data, demo]);
   const refresh = useCallback(async () => {
-    if (!client) return;
-    setLoading(true);
+    if (!client || !cache.current.userId) return;
+    const generation = cache.current.generation;
+    const request = ++cache.current.request;
+    const current = () =>
+      generation === cache.current.generation &&
+      request === cache.current.request;
+    if (!cache.current.loaded) setLoading(true);
     try {
       const tables = [
         "accounts",
@@ -119,15 +134,27 @@ export function usePanco(client: SupabaseClient | null) {
       );
       const forecast = await client.rpc("forecast_month");
       if (forecast.error) throw forecast.error;
-      setData({
+      if (!current()) return;
+      const fresh = {
         ...Object.fromEntries(entries),
         forecast: forecast.data,
-      } as PancoData);
-      setError("");
+      } as PancoData;
+      fresh.transactions = fresh.transactions.map((t) =>
+        pendingCategories.current.has(t.id)
+          ? { ...t, category_id: pendingCategories.current.get(t.id)! }
+          : t,
+      );
+      cache.current.loaded = true;
+      setData(fresh);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao carregar dados.");
+      if (current())
+        setError(
+          e instanceof Error
+            ? e.message
+            : "Falha ao atualizar dados. Tente novamente.",
+        );
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   }, [client]);
   useEffect(() => {
@@ -135,18 +162,53 @@ export function usePanco(client: SupabaseClient | null) {
       setLoading(false);
       return;
     }
-    client.auth.getSession().then(({ data, error }) => {
-      if (error) setError(error.message);
-      setSession(data.session);
-      setLoading(false);
+    let active = true;
+    let authEvent = false;
+    function acceptSession(s: Session | null) {
+      if (!active) return;
+      const userId = s?.user.id || "";
+      if (cache.current.userId !== userId) {
+        cache.current = {
+          userId,
+          generation: cache.current.generation + 1,
+          request: 0,
+          loaded: false,
+        };
+        pendingCategories.current.clear();
+        setSavingCategories([]);
+        setData(empty());
+        setError("");
+        setLoading(!!userId);
+      }
+      setSession(s);
+      if (!userId) setLoading(false);
+    }
+    client.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!active || authEvent) return;
+        if (error) setError(error.message);
+        acceptSession(data.session);
+      })
+      .catch(() => {
+        if (active && !authEvent) {
+          setLoading(false);
+          setError("Não foi possível recuperar sua sessão. Tente novamente.");
+        }
+      });
+    const { data: listener } = client.auth.onAuthStateChange((_event, s) => {
+      authEvent = true;
+      acceptSession(s);
     });
-    const { data: listener } = client.auth.onAuthStateChange((_event, s) =>
-      setSession(s),
-    );
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      active = false;
+      cache.current.generation++;
+      listener.subscription.unsubscribe();
+    };
   }, [client]);
+  const userId = session?.user.id;
   useEffect(() => {
-    if (!client || !session) return;
+    if (!client || !userId) return;
     void refresh();
     let timer: ReturnType<typeof setTimeout>;
     const channel = client
@@ -160,7 +222,7 @@ export function usePanco(client: SupabaseClient | null) {
       clearTimeout(timer);
       void client.removeChannel(channel);
     };
-  }, [client, session, refresh]);
+  }, [client, userId, refresh]);
   async function saveBudget(
     month: string,
     rows: Omit<Budget, "month" | "id">[],
@@ -182,6 +244,7 @@ export function usePanco(client: SupabaseClient | null) {
       }));
       return;
     }
+    const generation = cache.current.generation;
     if (budgets.length) {
       const { error } = await client!.from("monthly_budgets").upsert(
         budgets.map((row) => ({ ...row, user_id: session!.user.id })),
@@ -189,6 +252,8 @@ export function usePanco(client: SupabaseClient | null) {
       );
       if (error) throw error;
     }
+    if (generation !== cache.current.generation) return;
+    cache.current.request++;
     setData((d) => ({
       ...d,
       budgets: [
@@ -196,6 +261,7 @@ export function usePanco(client: SupabaseClient | null) {
         ...budgets,
       ],
     }));
+    void refresh();
   }
   async function login(email: string, password: string) {
     if (!client) return;
@@ -249,8 +315,22 @@ export function usePanco(client: SupabaseClient | null) {
     });
   }
   async function logout() {
-    await client?.auth.signOut();
+    const result = await client?.auth.signOut();
+    if (result?.error) {
+      setError(result.error.message);
+      return;
+    }
+    cache.current = {
+      userId: "",
+      generation: cache.current.generation + 1,
+      request: 0,
+      loaded: false,
+    };
+    pendingCategories.current.clear();
+    setSavingCategories([]);
+    setSession(null);
     setData(empty());
+    setLoading(false);
   }
   async function save(
     table:
@@ -276,11 +356,20 @@ export function usePanco(client: SupabaseClient | null) {
       }));
       return;
     }
-    const { error } = await client!
+    const generation = cache.current.generation;
+    const { data: saved, error } = await client!
       .from(table)
-      .upsert({ ...values, user_id: session!.user.id });
+      .upsert({ ...values, user_id: session!.user.id })
+      .select("*")
+      .single();
     if (error) throw error;
-    await refresh();
+    if (generation !== cache.current.generation) return;
+    cache.current.request++;
+    setData((d) => ({
+      ...d,
+      [table]: [...d[table].filter((row) => row.id !== saved.id), saved],
+    }));
+    void refresh();
   }
   async function categorize(id: string, categoryId: string) {
     if (demo) {
@@ -292,12 +381,46 @@ export function usePanco(client: SupabaseClient | null) {
       }));
       return;
     }
-    const { error } = await client!
-      .from("transactions")
-      .update({ category_id: categoryId, category_source: "manual" })
-      .eq("id", id);
-    if (error) throw error;
-    await refresh();
+    if (pendingCategories.current.has(id))
+      throw new Error("Aguarde o salvamento desta categoria.");
+    const generation = cache.current.generation;
+    const previous =
+      data.transactions.find((t) => t.id === id)?.category_id ?? null;
+    pendingCategories.current.set(id, categoryId);
+    setSavingCategories((ids) => [...ids, id]);
+    setData((d) => ({
+      ...d,
+      transactions: d.transactions.map((t) =>
+        t.id === id ? { ...t, category_id: categoryId } : t,
+      ),
+    }));
+    try {
+      const { error } = await client!
+        .from("transactions")
+        .update({ category_id: categoryId, category_source: "manual" })
+        .eq("id", id)
+        .select("id")
+        .single();
+      if (error) throw error;
+    } catch (error) {
+      if (generation === cache.current.generation) {
+        setData((d) => ({
+          ...d,
+          transactions: d.transactions.map((t) =>
+            t.id === id ? { ...t, category_id: previous } : t,
+          ),
+        }));
+      }
+      throw error;
+    } finally {
+      if (generation === cache.current.generation) {
+        // Invalidate reads started before this write finished, including Realtime reads.
+        cache.current.request++;
+        pendingCategories.current.delete(id);
+        setSavingCategories((ids) => ids.filter((value) => value !== id));
+        void refresh();
+      }
+    }
   }
   async function createTransaction(values: Record<string, unknown>) {
     if (demo) {
@@ -318,11 +441,12 @@ export function usePanco(client: SupabaseClient | null) {
       setData((d) => ({ ...d, transactions: [row, ...d.transactions] }));
       return;
     }
+    const generation = cache.current.generation;
     const { error } = await client!.rpc("create_manual_transaction", {
       p_data: values,
     });
     if (error) throw error;
-    await refresh();
+    if (generation === cache.current.generation) void refresh();
   }
   async function sync(onlyItem?: string, register = false) {
     if (demo) {
@@ -484,6 +608,7 @@ export function usePanco(client: SupabaseClient | null) {
     loading,
     error,
     syncing,
+    savingCategories,
     setError,
     login,
     signup,

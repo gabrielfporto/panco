@@ -96,6 +96,7 @@ export function Transactions({ panco }: { panco: PancoController }) {
           <select
             aria-label={`Categoria de ${t.description}`}
             value={t.category_id || ""}
+            disabled={panco.savingCategories.includes(t.id)}
             onChange={(e) =>
               panco
                 .categorize(t.id, e.target.value)
