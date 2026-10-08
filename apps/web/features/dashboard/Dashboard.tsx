@@ -1,3 +1,4 @@
+import { transactionMonth } from "../../../../packages/core/src/features/transactions/period";
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -8,6 +9,8 @@ import {
 } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { Feature } from "../../../../packages/react-features/src/types";
+import { useMonthlyOverview } from "../../../../packages/react-features/src/use-monthly-overview";
+import { MonthlySummary } from "../planning/MonthlySummary";
 import { AccountLogo } from "../shared/AccountLogo";
 import { cents, decimal } from "../../../../packages/core/src/money";
 import { brl, shortDate, today, monthLabel } from "../shared/format";
@@ -26,19 +29,17 @@ export function Dashboard({
   const currentTotal = decimal(
     bankAccounts.reduce((sum, a) => sum + cents(a.current_balance), 0n),
   );
+  const { report, error } = useMonthlyOverview(panco);
+  const income = Number(report?.actual_income || 0),
+    expense = Number(report?.actual_expense || 0);
   const actual = data.transactions.filter(
     (t) =>
+      t.status === "posted" &&
       t.source !== "projection" &&
-      t.status !== "cancelled" &&
       t.kind === "regular" &&
-      t.occurred_at.startsWith(today().slice(0, 7)),
+      t.currency === "BRL" &&
+      transactionMonth(t) === panco.month,
   );
-  const income = actual
-      .filter((t) => t.direction === "income")
-      .reduce((s, t) => s + Number(t.amount), 0),
-    expense = actual
-      .filter((t) => t.direction === "expense")
-      .reduce((s, t) => s + Number(t.amount), 0);
   const percent = income + expense ? (income / (income + expense)) * 100 : 0;
   const upcoming = [
     ...data.transactions
@@ -83,6 +84,21 @@ export function Dashboard({
         </div>
         <span className="welcome-mark">✳</span>
       </div>
+      {error && (
+        <p role="alert" className="notice">
+          {error}
+        </p>
+      )}
+      {report && (
+        <>
+          <h2 className="capitalize">{monthLabel(panco.month)}</h2>
+          <MonthlySummary report={report} />
+          <p className="fine-print">
+            Resultado mensal = entradas menos saídas confirmadas. O saldo
+            bancário atual aparece separadamente abaixo.
+          </p>
+        </>
+      )}
       <div className="stat-grid">
         <section className="card projection">
           <div className="card-eyebrow">
@@ -186,7 +202,10 @@ export function Dashboard({
                   Despesas<strong>{brl(expense)}</strong>
                 </span>
               </div>
-              <p>Os valores incluem lançamentos pendentes do mês.</p>
+              <p>
+                Os valores consideram lançamentos confirmados do mês
+                selecionado.
+              </p>
             </div>
           </div>
         </section>

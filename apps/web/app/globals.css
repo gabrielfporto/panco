@@ -2429,3 +2429,98 @@ body {
 .budget-input {
   white-space: nowrap;
 }
+
+/* Monthly planning shares one period across the financial screens. */
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.month-picker input {
+  width: 155px;
+  min-width: 0;
+  border: 1px solid var(--line, #dce2eb);
+  border-radius: 9px;
+  background: var(--surface, #fff);
+  color: inherit;
+  padding: 8px;
+}
+.monthly-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+.monthly-summary .card {
+  border-top: 3px solid #d7ac40;
+}
+.budget-row small {
+  display: block;
+  margin-top: 5px;
+}
+@media (max-width: 720px) {
+  .month-picker input {
+    width: 130px;
+    font-size: 12px;
+    padding: 6px;
+  }
+  .month-picker .icon-button {
+    width: 25px;
+    padding: 3px;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .topbar-actions {
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .monthly-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .monthly-summary .card {
+    padding: 15px;
+  }
+  .monthly-summary strong {
+    font-size: clamp(18px, 5vw, 26px);
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 720px) {
+  .monthly-summary .card {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 14px;
+  }
+  .monthly-summary .card > span {
+    font-size: 12px;
+  }
+  .monthly-summary strong {
+    font-size: clamp(17px, 4.6vw, 22px);
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .topbar-start {
+    display: none;
+  }
+  .topbar-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .month-picker {
+    flex: 1;
+    max-width: 190px;
+  }
+  .month-picker input {
+    width: 100%;
+    font-size: 13px;
+  }
+  .month-picker > .icon-button {
+    display: none;
+  }
+}

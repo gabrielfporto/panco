@@ -60,6 +60,9 @@ export function Editor({
           kind: s("kind"),
           color: s("color"),
           icon: "tag",
+          expense_group:
+            s("kind") === "income" ? null : s("expense_group") || null,
+          sort_order: Number(s("sort_order") || 0),
         });
       if (type === "subscription")
         await panco.save("subscriptions", {
@@ -156,6 +159,31 @@ export function Editor({
               defaultValue={field("next_due_date", today())}
             />
           </label>
+        )}
+        {type === "category" && (
+          <>
+            <label>
+              Grupo de gastos
+              <select
+                name="expense_group"
+                defaultValue={field("expense_group")}
+              >
+                <option value="">Sem grupo / Entrada</option>
+                <option value="essential">Essencial</option>
+                <option value="non_essential">Não essencial</option>
+              </select>
+            </label>
+            <label>
+              Ordem de exibição
+              <input
+                name="sort_order"
+                type="number"
+                step="1"
+                min="0"
+                defaultValue={field("sort_order", 0)}
+              />
+            </label>
+          </>
         )}
         {["transaction", "subscription"].includes(type) && (
           <label>

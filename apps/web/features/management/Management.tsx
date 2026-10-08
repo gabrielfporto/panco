@@ -254,33 +254,49 @@ export function Management({
           aprende uma regra para aquele estabelecimento.
         </p>
         <div className="category-grid">
-          {d.categories.map((c) => (
-            <button
-              className="card category-card"
-              key={c.id}
-              onClick={() => open("category", c.id)}
-            >
-              <span
-                className="category-mark"
-                style={{ background: c.color + "20", color: c.color }}
+          {d.categories
+            .slice()
+            .sort(
+              (a, b) =>
+                (a.sort_order || 0) - (b.sort_order || 0) ||
+                a.name.localeCompare(b.name),
+            )
+            .map((c) => (
+              <button
+                className="card category-card"
+                key={c.id}
+                onClick={() => open("category", c.id)}
               >
-                {c.name.slice(0, 1)}
-              </span>
-              <div className="grow">
-                <h3>{c.name}</h3>
-                <span>
-                  {
-                    {
-                      income: "Receitas",
-                      expense: "Despesas",
-                      both: "Receitas e despesas",
-                    }[c.kind]
-                  }
+                <span
+                  className="category-mark"
+                  style={{ background: c.color + "20", color: c.color }}
+                >
+                  {c.name.slice(0, 1)}
                 </span>
-              </div>
-              <Pencil size={16} />
-            </button>
-          ))}
+                <div className="grow">
+                  <h3>{c.name}</h3>
+                  <span>
+                    {
+                      {
+                        income: "Receitas",
+                        expense: "Despesas",
+                        both: "Receitas e despesas",
+                      }[c.kind]
+                    }
+                  </span>
+                  {c.kind !== "income" && (
+                    <small>
+                      {c.expense_group === "essential"
+                        ? "Essencial"
+                        : c.expense_group === "non_essential"
+                          ? "Não essencial"
+                          : "Grupo a definir"}
+                    </small>
+                  )}
+                </div>
+                <Pencil size={16} />
+              </button>
+            ))}
           <button className="add-tile" onClick={() => open("category")}>
             <Plus size={22} /> Criar categoria
           </button>

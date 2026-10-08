@@ -1,5 +1,6 @@
+import { testMonthlyPlanning } from "./monthly-cases.ts";
 import { PGlite } from "@electric-sql/pglite";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import assert from "node:assert/strict";
 const db = new PGlite();
 async function run() {
@@ -7,15 +8,11 @@ async function run() {
  create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}');
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema public,auth to authenticated,anon,service_role;grant execute on function auth.uid() to authenticated,anon,service_role;`);
-  for (const name of [
-    "001_auro_schema.sql",
-    "002_core.sql",
-    "003_manual_and_recurring.sql",
-    "004_consistency.sql",
-    "005_profile.sql",
-    "20261007093914_ignore_automatic_redemptions.sql",
-    "20261007232440_monthly_category_planning.sql",
-  ]) {
+  for (const name of (
+    await readdir(new URL("../supabase/migrations/", import.meta.url))
+  )
+    .filter((name) => name.endsWith(".sql"))
+    .sort()) {
     await db.exec(
       await readFile(
         new URL("../supabase/migrations/" + name, import.meta.url),
@@ -461,6 +458,11 @@ async function run() {
   console.log(
     "Planejamento: gravação, atualização, valores não negativos e isolamento RLS OK",
   );
+  if (process.env.PANCO_CANDIDATE_MIGRATION)
+    await db.exec(
+      await readFile(process.env.PANCO_CANDIDATE_MIGRATION, "utf8"),
+    );
+  await testMonthlyPlanning(db);
   await db.close();
   console.log("Todos os testes PostgreSQL passaram.");
 }

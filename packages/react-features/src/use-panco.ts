@@ -6,7 +6,9 @@ import type {
   Transaction,
   ChatMessage,
   Budget,
+  MonthlyOverview,
 } from "./types.ts";
+import { demoMonthlyOverview } from "./monthly-demo.ts";
 import { demoData } from "./demo.ts";
 import { syncItems } from "./sync.ts";
 import { isIgnoredTransaction } from "../../core/src/features/transactions/visibility.ts";
@@ -52,6 +54,15 @@ export function usePanco(client: SupabaseClient | null) {
   });
   const pendingCategories = useRef(new Map<string, string>());
   const [savingCategories, setSavingCategories] = useState<string[]>([]);
+  const [month, setMonth] = useState(() =>
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Bahia",
+      year: "numeric",
+      month: "2-digit",
+    })
+      .format(new Date())
+      .slice(0, 7),
+  );
   const displayed = useMemo(() => {
     const transactions = data.transactions.filter(
       (t) => !isIgnoredTransaction(t),
@@ -209,7 +220,21 @@ export function usePanco(client: SupabaseClient | null) {
   const userId = session?.user.id;
   useEffect(() => {
     if (!client || !userId) return;
-    void refresh();
+    const generation = cache.current.generation;
+    void (async () => {
+      const result = await client.rpc("panco_initialize_planning");
+      if (generation !== cache.current.generation) return;
+      if (result.error)
+        setError(
+          "Não foi possível preparar as categorias do planejamento. Tente atualizar novamente.",
+        );
+      await refresh();
+    })().catch(() => {
+      if (generation === cache.current.generation) {
+        setError("Falha ao carregar seu espaço. Tente novamente.");
+        setLoading(false);
+      }
+    });
     let timer: ReturnType<typeof setTimeout>;
     const channel = client
       .channel("panco-data")
@@ -223,6 +248,19 @@ export function usePanco(client: SupabaseClient | null) {
       void client.removeChannel(channel);
     };
   }, [client, userId, refresh]);
+  async function loadMonthlyOverview(
+    selectedMonth: string,
+  ): Promise<MonthlyOverview> {
+    if (!/^\d{4}-\d{2}$/.test(selectedMonth)) throw new Error("Mês inválido.");
+    if (!client) return demoMonthlyOverview(displayed, selectedMonth);
+    const r = await client.rpc("monthly_overview", {
+      p_month: selectedMonth + "-01",
+      p_currency: "BRL",
+    });
+    if (r.error)
+      throw new Error("Não foi possível atualizar o resumo deste mês.");
+    return r.data as MonthlyOverview;
+  }
   async function saveBudget(
     month: string,
     rows: Omit<Budget, "month" | "id">[],
@@ -609,6 +647,9 @@ export function usePanco(client: SupabaseClient | null) {
     error,
     syncing,
     savingCategories,
+    month,
+    setMonth,
+    loadMonthlyOverview,
     setError,
     login,
     signup,

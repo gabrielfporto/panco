@@ -5,6 +5,8 @@ import {
   LayoutDashboard,
   Target,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   ArrowLeftRight,
   CreditCard,
   Repeat2,
@@ -29,6 +31,7 @@ import { Assistant } from "../assistant/Assistant";
 import { Auth } from "./Auth";
 import { AddAccount } from "../management/AddAccount";
 import { Editor } from "../shared/Editor";
+import { addMonths } from "../../../../packages/core/src/features/transactions/billing";
 import { monthLabel, today } from "../shared/format";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -159,10 +162,34 @@ export function PancoApp() {
             >
               <LogOut size={18} />
             </button>
-            <span className="month-caption">
-              <CalendarDays size={16} />
-              <span className="capitalize">{monthLabel(today())}</span>
-            </span>
+            <div className="month-picker">
+              <button
+                className="icon-button"
+                aria-label="Mês anterior"
+                onClick={() =>
+                  panco.setMonth(addMonths(panco.month + "-01", -1).slice(0, 7))
+                }
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <input
+                aria-label="Mês e ano"
+                type="month"
+                value={panco.month}
+                onChange={(e) => {
+                  if (e.target.value) panco.setMonth(e.target.value);
+                }}
+              />
+              <button
+                className="icon-button"
+                aria-label="Próximo mês"
+                onClick={() =>
+                  panco.setMonth(addMonths(panco.month + "-01", 1).slice(0, 7))
+                }
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
             <button
               className="icon-button"
               title="Sincronizar contas"

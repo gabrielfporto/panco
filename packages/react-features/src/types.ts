@@ -23,6 +23,9 @@ export interface Card {
   currency: string;
 }
 export interface Category {
+  expense_group?: "essential" | "non_essential" | null;
+  sort_order?: number;
+  archived_at?: string | null;
   id: string;
   name: string;
   kind: string;
@@ -147,3 +150,25 @@ export type Feature =
   | "categories"
   | "investments"
   | "assistant";
+
+export interface MonthlyLine {
+  category_id: string | null;
+  name: string;
+  direction: "income" | "expense";
+  expense_group: "essential" | "non_essential" | null;
+  archived: boolean;
+  estimated: Money;
+  actual: Money;
+  difference: Money;
+}
+export interface MonthlyOverview {
+  month: string;
+  currency: string;
+  estimated_income: Money;
+  estimated_expense: Money;
+  actual_income: Money;
+  actual_expense: Money;
+  estimated_result: Money;
+  actual_result: Money;
+  lines: MonthlyLine[];
+}

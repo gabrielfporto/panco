@@ -1,103 +1,72 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
+import type { MonthlyOverview } from "../../../../packages/react-features/src/types";
+import { useMonthlyOverview } from "../../../../packages/react-features/src/use-monthly-overview";
 import { cents, decimal } from "../../../../packages/core/src/money";
-import { brl, today, monthLabel } from "../shared/format";
-
+import { brl, monthLabel } from "../shared/format";
+import { MonthlySummary } from "./MonthlySummary";
 export function Planning({ panco }: { panco: PancoController }) {
-  const [month, setMonth] = useState(today().slice(0, 7));
+  const { report, error } = useMonthlyOverview(panco);
   return (
     <>
-      <label className="planning-month">
-        Mês do planejamento
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => {
-            if (e.target.value) setMonth(e.target.value);
-          }}
-        />
-      </label>
-      <MonthlyPlan key={month} month={month} panco={panco} />
+      {error && (
+        <p role="alert" className="notice">
+          {error}
+        </p>
+      )}
+      {report ? (
+        <MonthlyPlan key={panco.month} report={report} panco={panco} />
+      ) : (
+        <p role="status" className="empty">
+          Carregando planejamento de {monthLabel(panco.month)}…
+        </p>
+      )}
     </>
   );
 }
-
 function MonthlyPlan({
-  month,
+  report,
   panco,
 }: {
-  month: string;
+  report: MonthlyOverview;
   panco: PancoController;
 }) {
-  const categories = panco.data.categories;
-  const lines = categories.flatMap((category) =>
-    (["income", "expense"] as const)
-      .filter(
-        (direction) => category.kind === direction || category.kind === "both",
-      )
-      .map((direction) => ({
-        category,
-        direction,
-        key: `${category.id}:${direction}`,
-      })),
-  );
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      lines.map((line) => [
-        line.key,
-        String(
-          panco.data.budgets?.find(
-            (b) =>
-              b.month === month + "-01" &&
-              b.category_id === line.category.id &&
-              b.direction === line.direction,
-          )?.amount ?? "",
-        ),
-      ]),
-    ),
-  );
+  const [values, setValues] = useState<Record<string, string>>({});
+  const dirty = useRef(new Set<string>());
   const [saving, setSaving] = useState(false),
     [message, setMessage] = useState("");
-  const parsed = (value: string) =>
-    cents((value.trim() || "0").replace(",", "."));
-  const total = (direction: string) =>
-    lines
-      .filter((l) => l.direction === direction)
-      .reduce((sum, l) => {
-        try {
-          return sum + parsed(values[l.key] || "");
-        } catch {
-          return sum;
-        }
-      }, 0n);
-  const income = total("income"),
-    expense = total("expense");
-  const actual = (category: string, direction: string) =>
-    panco.data.transactions
-      .filter(
-        (t) =>
-          t.category_id === category &&
-          t.direction === direction &&
-          t.status === "posted" &&
-          t.source !== "projection" &&
-          t.kind === "regular" &&
-          t.currency === "BRL" &&
-          t.occurred_at.startsWith(month),
-      )
-      .reduce((sum, t) => sum + cents(t.amount), 0n);
+  const key = (line: MonthlyOverview["lines"][number]) =>
+    `${line.category_id}:${line.direction}`;
+  useEffect(() => {
+    setValues((old) =>
+      Object.fromEntries(
+        report.lines
+          .filter((l) => l.category_id)
+          .map((l) => [
+            key(l),
+            dirty.current.has(key(l)) ? old[key(l)] : String(l.estimated),
+          ]),
+      ),
+    );
+  }, [report]);
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    setMessage("");
     setSaving(true);
+    setMessage("");
     try {
       await panco.saveBudget(
-        month + "-01",
-        lines.map((l) => ({
-          category_id: l.category.id,
-          direction: l.direction,
-          amount: decimal(parsed(values[l.key] || "")),
-        })),
+        report.month,
+        report.lines
+          .filter((l) => l.category_id)
+          .map((l) => ({
+            category_id: l.category_id!,
+            direction: l.direction,
+            amount: decimal(
+              cents((values[key(l)] || "0").trim().replace(",", ".")),
+            ),
+          })),
       );
+      dirty.current.clear();
       setMessage("Planejamento salvo.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Não foi possível salvar.");
@@ -105,76 +74,91 @@ function MonthlyPlan({
       setSaving(false);
     }
   }
+  const groups = [
+    { id: "income", title: "Entradas" },
+    { id: "essential", title: "Gastos essenciais" },
+    { id: "non_essential", title: "Gastos não essenciais" },
+    { id: "unassigned", title: "Gastos a organizar" },
+  ];
   return (
     <form onSubmit={save}>
-      <div className="planning-summary">
-        <div className="card">
-          <span>Receita estimada</span>
-          <strong className="positive">{brl(decimal(income))}</strong>
-        </div>
-        <div className="card">
-          <span>Despesa estimada</span>
-          <strong className="negative">{brl(decimal(expense))}</strong>
-        </div>
-        <div className="card">
-          <span>Resultado planejado</span>
-          <strong className={income >= expense ? "positive" : "negative"}>
-            {brl(decimal(income - expense))}
-          </strong>
-        </div>
-      </div>
+      <MonthlySummary report={report} />
       <p className="fine-print">
-        Valores em reais para {monthLabel(month)}. O planejamento não cria
-        transações nem altera seu saldo. Realizado considera lançamentos
-        confirmados; transferências, projeções e o filtro de resgates ficam de
-        fora.
+        {monthLabel(report.month)} · Valores em reais. O realizado usa
+        movimentações confirmadas do mês, sem transferências, pagamentos de
+        fatura vinculados ou resgates ignorados. O resultado do mês é diferente
+        do saldo bancário.
+      </p>
+      <p className="fine-print">
+        Salve suas estimativas para atualizar o resumo e as diferenças.
+        Categorias antigas sem grupo continuam em “Gastos a organizar”; você
+        pode definir o grupo na aba Categorias.
       </p>
       <div className="planning-columns">
-        {(["income", "expense"] as const).map((direction) => (
-          <section className="card" key={direction}>
-            <h2>
-              {direction === "income"
-                ? "Quanto espero receber"
-                : "Quanto espero gastar"}
-            </h2>
-            {lines
-              .filter((l) => l.direction === direction)
-              .map((line) => (
-                <label className="budget-row" key={line.key}>
+        {groups.map((group) => {
+          const lines = report.lines.filter((l) =>
+            group.id === "income"
+              ? l.direction === "income"
+              : l.direction === "expense" &&
+                (l.expense_group || "unassigned") === group.id,
+          );
+          if (!lines.length) return null;
+          return (
+            <section className="card" key={group.id}>
+              <h2>{group.title}</h2>
+              {lines.map((line) => (
+                <label className="budget-row" key={key(line)}>
                   <span>
-                    <strong>{line.category.name}</strong>
-                    <small>
-                      Realizado:{" "}
-                      {brl(decimal(actual(line.category.id, direction)))}
+                    <strong>
+                      {line.name}
+                      {line.archived ? " · Arquivada" : ""}
+                    </strong>
+                    <small>Realizado: {brl(line.actual)}</small>
+                    <small
+                      className={
+                        Number(line.difference) < 0 ? "negative" : "positive"
+                      }
+                    >
+                      {line.direction === "income" ? "Diferença" : "Falta"}:{" "}
+                      {brl(line.difference)}
+                      {line.direction === "expense" &&
+                      Number(line.difference) < 0
+                        ? " · Acima do orçamento"
+                        : ""}
                     </small>
                   </span>
-                  <span className="budget-input">
-                    R$
-                    <input
-                      aria-label={`${line.category.name} — ${direction === "income" ? "receita" : "despesa"} estimada`}
-                      inputMode="decimal"
-                      placeholder="0,00"
-                      value={values[line.key] || ""}
-                      onChange={(e) => {
-                        setValues({ ...values, [line.key]: e.target.value });
-                        setMessage("");
-                      }}
-                    />
-                  </span>
+                  {line.category_id ? (
+                    <span className="budget-input">
+                      R$
+                      <input
+                        aria-label={`${line.name} — ${line.direction === "income" ? "receita" : "despesa"} estimada`}
+                        inputMode="decimal"
+                        disabled={saving || line.archived}
+                        value={values[key(line)] ?? String(line.estimated)}
+                        onChange={(e) => {
+                          dirty.current.add(key(line));
+                          setValues((v) => ({
+                            ...v,
+                            [key(line)]: e.target.value,
+                          }));
+                          setMessage("Há alterações não salvas.");
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    <span className="muted">Categorize os movimentos</span>
+                  )}
                 </label>
               ))}
-            {!lines.some((l) => l.direction === direction) && (
-              <p className="empty">
-                Crie uma categoria de{" "}
-                {direction === "income" ? "receita" : "despesa"} na aba
-                Categorias.
-              </p>
-            )}
-          </section>
-        ))}
+            </section>
+          );
+        })}
       </div>
       <div className="planning-save">
-        <button className="primary-button" disabled={saving || !lines.length}>
+        <button
+          className="primary-button"
+          disabled={saving || !report.lines.some((l) => l.category_id)}
+        >
           {saving ? "Salvando…" : "Salvar planejamento"}
         </button>
         <span role="status">{message}</span>

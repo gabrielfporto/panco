@@ -1,3 +1,4 @@
+import { transactionMonth } from "../../../../packages/core/src/features/transactions/period";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
@@ -9,9 +10,14 @@ export function Transactions({ panco }: { panco: PancoController }) {
   const [query, setQuery] = useState(""),
     [status, setStatus] = useState("all"),
     [account, setAccount] = useState("all"),
-    [month, setMonth] = useState(today().slice(0, 7)),
+    [allMonths, setAllMonths] = useState(false),
     [similarOnly, setSimilarOnly] = useState(false);
   const { data } = panco;
+  const month = allMonths ? "" : panco.month;
+  const setMonth = (value: string) => {
+    setAllMonths(!value);
+    if (value) panco.setMonth(value);
+  };
   const rows = data.transactions
     .filter(
       (t) =>
@@ -24,7 +30,7 @@ export function Transactions({ panco }: { panco: PancoController }) {
         (account === "all" ||
           t.account_id === account ||
           t.card_id === account) &&
-        (!month || t.occurred_at.startsWith(month)),
+        (!month || transactionMonth(t) === month),
     )
     .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
   const groups = groupSimilar(rows).filter(
