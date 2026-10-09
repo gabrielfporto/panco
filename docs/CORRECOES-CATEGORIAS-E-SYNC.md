@@ -5,9 +5,12 @@
 - Exclusão de categoria via `panco_delete_category`, com confirmação na interface. Quando há vínculos, exige substituição compatível, transfere movimentos, assinaturas e regras, soma orçamentos e só então exclui a categoria. Operação transacional com RLS, bloqueio por usuário e validação de proprietário. Não recria categorias excluídas no login seguinte.
 - Filtro bancário compartilhado no cliente e no SQL inclui `RES APLIC AUT MAIS` e `APL APLIC AUT MAIS`. Preserva dados brutos e saldo informado pelo banco; exclui da listagem, calendário, totais e previsão.
 - A [referência da Pluggy](https://v2.docs.pluggy.ai/en/reference/transaction/transactions-retrieve) define `billForecastDate` como `YYYY-MM`. O normalizador agora envia `bill_forecast_month`; a ingestão prioriza uma fatura existente ou calcula o vencimento com o dia do cartão. Sem esse dia, sinaliza revisão, sem inventar vencimento no dia 1. Datas completas antigas continuam aceitas.
+- Após corrigir a leitura, a importação do Itaú revelou timeout na gravação: o trigger recalculava todas as faturas para cada movimento. A atualização agora recalcula apenas as faturas afetadas, incluindo pagamentos bancários vinculados. O cursor continua avançando somente no commit completo da página.
+
+- Compras em outra moeda usam `amountInAccountCurrency` da Pluggy para o valor contabilizado. A moeda e o valor original ficam preservados em colunas próprias. Não se calcula câmbio nem se altera a moeda do cartão.
 
 ## Validação
 
-21 testes unitários; PostgreSQL/PGlite com migrations completas e cenário de atualização; catálogo exato, soma de orçamentos, exclusão com/sem vínculos, isolamento entre usuários, não recriação e período de fatura. Tipagem web e testes de cache sem recarga. Conferência responsiva em 320, 390, 768 e 1440 px.
+22 testes unitários; PostgreSQL/PGlite com migrations completas e cenário de atualização; catálogo exato, soma de orçamentos, exclusão com/sem vínculos, isolamento entre usuários, não recriação e período de fatura. Tipagem web e testes de cache sem recarga. Conferência responsiva em 320, 390, 768 e 1440 px.
 
 Na migração de produção, hashes comparativos confirmaram preservação dos 861 lançamentos (exceto categoria/data de atualização), das quatro contas e dos totais planejados por mês/direção.

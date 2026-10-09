@@ -5,6 +5,7 @@ export interface PluggyTransaction {
   accountId: string;
   date: string;
   amount: number | string;
+  amountInAccountCurrency?: number | string | null;
   description: string;
   currencyCode: string;
   status: "PENDING" | "POSTED";
@@ -22,7 +23,7 @@ export interface PluggyTransaction {
     cardNumber?: string;
   } | null;
 }
-export function normalizeTransaction(t: PluggyTransaction, isCard: boolean) {
+export function normalizeTransaction(t: PluggyTransaction, isCard: boolean, accountCurrency = t.currencyCode) {
   if (
     !t.id ||
     !t.accountId ||
@@ -32,6 +33,10 @@ export function normalizeTransaction(t: PluggyTransaction, isCard: boolean) {
     throw new Error("Transação Pluggy inválida");
   dateOnly(t.date);
   const signed = cents(t.amount);
+  const foreign = t.currencyCode !== accountCurrency;
+  if (foreign && t.amountInAccountCurrency == null)
+    throw new Error("Valor convertido da transação não informado pela Pluggy");
+  const booked = foreign ? cents(t.amountInAccountCurrency!) : signed;
   const meta = t.creditCardMetadata;
   const n = meta?.installmentNumber,
     total = meta?.totalInstallments;
@@ -50,9 +55,11 @@ export function normalizeTransaction(t: PluggyTransaction, isCard: boolean) {
     description: t.description,
     merchant_name: name,
     merchant_key: merchantKey(name || t.description),
-    amount: decimal(signed < 0n ? -signed : signed),
+    amount: decimal(booked < 0n ? -booked : booked),
     direction: (isCard ? signed >= 0n : signed < 0n) ? "expense" : "income",
-    currency: t.currencyCode,
+    currency: accountCurrency,
+    original_currency: foreign ? t.currencyCode : null,
+    original_amount: foreign ? decimal(signed < 0n ? -signed : signed) : null,
     status: t.status === "POSTED" ? "posted" : "pending",
     provider_status: t.status,
     payment_method: t.paymentData?.paymentMethod || null,

@@ -1,4 +1,4 @@
-import { admin, check, env, HttpError, ownerId } from "./http.ts";
+import { admin, check, env, HttpError, ownerId, syncStage } from "./http.ts";
 import { Pluggy } from "./pluggy.ts";
 import {
   normalizeTransaction,
@@ -187,15 +187,18 @@ export async function mappedRows(
   const card = check(
     await db
       .from("cards")
-      .select("id")
+      .select("id,currency")
       .eq("connection_id", c.id)
       .eq("pluggy_account_id", accountId)
       .maybeSingle(),
   );
+  const account = card || check(await db.from("accounts").select("id,currency")
+    .eq("connection_id",c.id).eq("pluggy_account_id",accountId).single());
+  if (!account) throw new Error("Conta não encontrada");
   return rows.map((t) => {
     if (t.accountId !== accountId) throw new Error("Conta divergente");
     return {
-      ...normalizeTransaction(t, !!card),
+      ...normalizeTransaction(t, !!card, account.currency),
       external_account_id: accountId,
     };
   });
@@ -220,17 +223,17 @@ export async function syncAccount(
   let imported = 0;
   try {
     for (let i = 0; i < 2; i++) {
-      const page = await api.page(accountId, next, createdAtFrom);
+      const page = await syncStage("consulta de transações", () => api.page(accountId, next, createdAtFrom));
       if (page.next && page.next === next) throw new Error("Cursor repetido");
-      const rows = await mappedRows(db, c, accountId, page.results);
-      imported += check(
+      const rows = await syncStage("leitura das transações", () => mappedRows(db, c, accountId, page.results));
+      imported += await syncStage("gravação das transações", async () => check(
         await db.rpc("auro_commit_page", {
           p_checkpoint: claim.id,
           p_token: claim.token,
           p_rows: rows,
           p_next: page.next,
         }),
-      );
+      ));
       next = page.next;
       if (!next) break;
     }

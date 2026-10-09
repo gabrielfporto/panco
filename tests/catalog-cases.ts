@@ -168,15 +168,17 @@ export async function testForecastPeriod(db: PGlite) {
     status: "pending",
     provider_status: "PENDING",
     kind: "regular",
-    bill_forecast_month: "2091-03-01",
+    bill_forecast_month: "2091-03-01", original_currency: "USD", original_amount: "10.00",
   };
   await db.query("select auro_ingest($1,$2)", [c.id, JSON.stringify([row])]);
   const tx = await one(
-    "select due_date::text,billing_month::text,needs_review from transactions where pluggy_transaction_id='forecast-month'",
+    "select due_date::text,billing_month::text,needs_review,original_currency,original_amount from transactions where pluggy_transaction_id='forecast-month'",
   );
   assert.equal(tx.due_date, "2091-03-05");
   assert.equal(tx.billing_month, "2091-03-01");
   assert.equal(tx.needs_review, false);
+  assert.equal(tx.original_currency, "USD");
+  assert.equal(Number(tx.original_amount), 10);
   await db.query(
     "update invoices set due_date='2091-03-08' where reference_month='2091-03-01' and user_id=$1",
     [c.user_id],

@@ -83,3 +83,13 @@ test("mês previsto Pluggy não é tratado como vencimento no dia primeiro", () 
     ),
   );
 });
+
+test('compra internacional usa conversão do provedor e preserva o valor original', () => {
+ const t={id:'usd',accountId:'card',date:'2026-10-09T00:00:00Z',description:'Compra internacional',amount:10,currencyCode:'USD',status:'POSTED' as const,amountInAccountCurrency:52.34};
+ const r=normalizeTransaction(t,true,'BRL');
+ assert.equal(r.amount,'52.34'); assert.equal(r.currency,'BRL');
+ assert.equal(r.original_amount,'10.00'); assert.equal(r.original_currency,'USD');
+ assert.equal(r.direction,'expense');
+ assert.throws(()=>normalizeTransaction({...t,amountInAccountCurrency:null},true,'BRL'), /convertido/);
+ assert.equal(normalizeTransaction({...t,amount:-10,amountInAccountCurrency:52.34},true,'BRL').direction,'income');
+});
