@@ -745,7 +745,7 @@ export default function App() {
             <Text style={s.title}>Cada coisa em seu lugar.</Text>
             <Text style={s.subtitle}>Suas categorias e regras pessoais.</Text>
             <Button title="+ Nova categoria" onPress={() => open("category")} />
-            {d.categories.map((c) => (
+            {d.categories.filter(c => !c.archived_at).map((c) => (
               <View style={[s.card, s.row]} key={c.id}>
                 <View style={[s.categoryDot, { backgroundColor: c.color }]} />
                 <Text style={[s.rowTitle, { flex: 1 }]}>{c.name}</Text>
@@ -876,7 +876,7 @@ export default function App() {
               />
             </View>
             {editor === "categorize" ? (
-              d.categories.map((c) => (
+              d.categories.filter(c => !c.archived_at).map((c) => (
                 <Button
                   key={c.id}
                   title={c.name}
@@ -985,7 +985,7 @@ export default function App() {
                     </View>
                     <Text style={s.label}>Categoria</Text>
                     <View style={s.chips}>
-                      {d.categories.map((c) => (
+                      {d.categories.filter(c => !c.archived_at).map((c) => (
                         <Pressable
                           key={c.id}
                           style={[s.chip, category === c.id && s.chipActive]}

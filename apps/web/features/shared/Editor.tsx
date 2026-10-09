@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
+import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
 import { today } from "./format";
 export function Editor({
   type,
@@ -16,6 +17,8 @@ export function Editor({
   const ref = useRef<HTMLDialogElement>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false),
+    [replacement, setReplacement] = useState("");
   const d = panco.data;
   const existing = (
     type === "category"
@@ -59,9 +62,8 @@ export function Editor({
           name: s("name"),
           kind: s("kind"),
           color: s("color"),
-          icon: "tag",
-          expense_group:
-            s("kind") === "income" ? null : s("expense_group") || null,
+          icon: s("icon"),
+          expense_group: null,
           sort_order: Number(s("sort_order") || 0),
         });
       if (type === "subscription")
@@ -163,14 +165,35 @@ export function Editor({
         {type === "category" && (
           <>
             <label>
-              Grupo de gastos
+              Emoji
               <select
-                name="expense_group"
-                defaultValue={field("expense_group")}
+                name="icon"
+                defaultValue={categoryEmoji(field("name"), field("icon"))}
               >
-                <option value="">Sem grupo / Entrada</option>
-                <option value="essential">Essencial</option>
-                <option value="non_essential">Não essencial</option>
+                {Array.from(
+                  new Set([
+                    categoryEmoji(field("name"), field("icon")),
+                    "💼",
+                    "✨",
+                    "↩️",
+                    "🏠",
+                    "🩺",
+                    "🍽️",
+                    "🚌",
+                    "💊",
+                    "💈",
+                    "🎮",
+                    "🛍️",
+                    "🔁",
+                    "🔧",
+                    "🏷️",
+                    "🐾",
+                    "🎓",
+                    "✈️",
+                  ]),
+                ).map((emoji) => (
+                  <option key={emoji}>{emoji}</option>
+                ))}
               </select>
             </label>
             <label>
@@ -235,11 +258,13 @@ export function Editor({
               Categoria
               <select name="category">
                 <option value="">Sem categoria</option>
-                {d.categories.map((c) => (
-                  <option value={c.id} key={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {d.categories
+                  .filter((c) => !c.archived_at)
+                  .map((c) => (
+                    <option value={c.id} key={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
               </select>
             </label>
             <label>
@@ -265,7 +290,6 @@ export function Editor({
               <select name="kind" defaultValue={field("kind", "expense")}>
                 <option value="expense">Despesas</option>
                 <option value="income">Receitas</option>
-                <option value="both">Ambos</option>
               </select>
             </label>
             <label>
@@ -362,6 +386,86 @@ export function Editor({
           {busy ? "Salvando…" : "Salvar"}
         </button>
       </form>
+      {type === "category" && id && (
+        <div className="category-delete">
+          {!deleting ? (
+            <button
+              type="button"
+              className="text-button negative"
+              disabled={busy}
+              onClick={() => setDeleting(true)}
+            >
+              <Trash2 size={17} /> Excluir categoria
+            </button>
+          ) : (
+            <>
+              <h3>Excluir {field("name")}?</h3>
+              <p>
+                Os movimentos serão mantidos. Se houver registros vinculados,
+                escolha a categoria que receberá seus lançamentos e valores
+                planejados.
+              </p>
+              <label>
+                Transferir para
+                <select
+                  value={replacement}
+                  onChange={(e) => setReplacement(e.target.value)}
+                  disabled={busy}
+                >
+                  <option value="">
+                    Sem substituição (categoria sem vínculos)
+                  </option>
+                  {d.categories
+                    .filter(
+                      (c) =>
+                        c.id !== id &&
+                        !c.archived_at &&
+                        c.kind === field("kind"),
+                    )
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {categoryEmoji(c.name, c.icon)} {c.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <div className="delete-actions">
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => setDeleting(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="primary-button danger-button"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError("");
+                    try {
+                      await panco.deleteCategory(id, replacement || null);
+                      close();
+                    } catch (e) {
+                      setError(
+                        e instanceof Error
+                          ? e.message
+                          : "Não foi possível excluir a categoria.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {busy ? "Excluindo…" : "Confirmar exclusão"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </dialog>
   );
 }

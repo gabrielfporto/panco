@@ -460,6 +460,55 @@ export function usePanco(client: SupabaseClient | null) {
       }
     }
   }
+  async function deleteCategory(id: string, replacement: string | null) {
+    const generation = cache.current.generation;
+    if (!demo) {
+      const { error } = await client!.rpc("panco_delete_category", {
+        p_category: id,
+        p_replacement: replacement,
+      });
+      if (error) throw new Error(error.message);
+      if (generation !== cache.current.generation) return;
+    } else if (
+      !replacement &&
+      (data.transactions.some((t) => t.category_id === id) ||
+        (data.budgets || []).some(
+          (b) => b.category_id === id && cents(b.amount) !== 0n,
+        ))
+    ) {
+      throw new Error(
+        "Escolha uma categoria para receber os registros vinculados.",
+      );
+    }
+    // Commit locally only after the server transaction succeeds. Invalidate older reads.
+    cache.current.request++;
+    setData((d) => {
+      const budgets = (d.budgets || [])
+        .filter((b) => b.category_id !== id)
+        .map((b) => ({ ...b }));
+      if (replacement)
+        for (const b of (d.budgets || []).filter((b) => b.category_id === id)) {
+          const target = budgets.find(
+            (x) =>
+              x.category_id === replacement &&
+              x.month === b.month &&
+              x.direction === b.direction,
+          );
+          if (target)
+            target.amount = decimal(cents(target.amount) + cents(b.amount));
+          else budgets.push({ ...b, category_id: replacement });
+        }
+      return {
+        ...d,
+        categories: d.categories.filter((c) => c.id !== id),
+        budgets,
+        transactions: d.transactions.map((t) =>
+          t.category_id === id ? { ...t, category_id: replacement } : t,
+        ),
+      };
+    });
+    if (!demo) void refresh();
+  }
   async function createTransaction(values: Record<string, unknown>) {
     if (demo) {
       const row = {
@@ -659,6 +708,7 @@ export function usePanco(client: SupabaseClient | null) {
     refresh,
     save,
     categorize,
+    deleteCategory,
     createTransaction,
     sync,
     ask,

@@ -1,4 +1,4 @@
-const ignoredDescription = "RES APLIC AUT MAIS";
+const ignoredDescription = /\b(?:RES|APL) APLIC AUT MAIS\b/;
 
 export function isIgnoredTransaction(transaction: {
   account_id?: string | null;
@@ -7,9 +7,6 @@ export function isIgnoredTransaction(transaction: {
 }) {
   if (!transaction.account_id) return false;
   return [transaction.description, transaction.merchant_name].some((value) =>
-    (value || "")
-      .toUpperCase()
-      .replace(/\s+/g, " ")
-      .includes(ignoredDescription),
+    ignoredDescription.test((value || "").toUpperCase().replace(/\s+/g, " ")),
   );
 }

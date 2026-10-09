@@ -7,6 +7,8 @@ test("ignora resgates automáticos bancários por descrição ou nome", () => {
     "RES APLIC AUT MAIS",
     "Crédito RES APLIC AUT MAIS 123",
     "res  aplic\taut mais",
+    "Aplicação APL APLIC AUT MAIS",
+    "apl aplic\taut mais",
   ])
     assert.equal(
       isIgnoredTransaction({ account_id: "bank", description }),

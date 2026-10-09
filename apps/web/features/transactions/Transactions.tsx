@@ -112,11 +112,17 @@ export function Transactions({ panco }: { panco: PancoController }) {
             <option value="" disabled>
               Sem categoria
             </option>
-            {data.categories.map((c) => (
-              <option value={c.id} key={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {data.categories
+              .filter(
+                (c) =>
+                  !c.archived_at &&
+                  (c.kind === t.direction || c.kind === "both"),
+              )
+              .map((c) => (
+                <option value={c.id} key={c.id}>
+                  {c.name}
+                </option>
+              ))}
           </select>
         </label>
       </article>
@@ -185,8 +191,9 @@ export function Transactions({ panco }: { panco: PancoController }) {
           </label>
         </div>
         <p className="fine-print">
-          RES APLIC AUT MAIS está fora da lista e dos totais. Lançamentos
-          semelhantes ficam agrupados para revisão, com os valores preservados.
+          RES APLIC AUT MAIS e APL APLIC AUT MAIS estão fora da lista e dos
+          totais. Lançamentos semelhantes ficam agrupados para revisão, com os
+          valores preservados.
         </p>
       </div>
       <div className="transaction-list">

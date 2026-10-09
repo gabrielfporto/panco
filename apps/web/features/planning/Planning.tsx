@@ -4,6 +4,7 @@ import type { MonthlyOverview } from "../../../../packages/react-features/src/ty
 import { useMonthlyOverview } from "../../../../packages/react-features/src/use-monthly-overview";
 import { cents, decimal } from "../../../../packages/core/src/money";
 import { brl, monthLabel } from "../shared/format";
+import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
 import { MonthlySummary } from "./MonthlySummary";
 export function Planning({ panco }: { panco: PancoController }) {
   const { report, error } = useMonthlyOverview(panco);
@@ -76,9 +77,7 @@ function MonthlyPlan({
   }
   const groups = [
     { id: "income", title: "Entradas" },
-    { id: "essential", title: "Gastos essenciais" },
-    { id: "non_essential", title: "Gastos não essenciais" },
-    { id: "unassigned", title: "Gastos a organizar" },
+    { id: "expense", title: "Saídas" },
   ];
   return (
     <form onSubmit={save}>
@@ -86,70 +85,99 @@ function MonthlyPlan({
       <p className="fine-print">
         {monthLabel(report.month)} · Valores em reais. O realizado usa
         movimentações confirmadas do mês, sem transferências, pagamentos de
-        fatura vinculados ou resgates ignorados. O resultado do mês é diferente
-        do saldo bancário.
+        fatura vinculados ou aplicações e resgates automáticos ignorados. O
+        resultado do mês é diferente do saldo bancário.
       </p>
       <p className="fine-print">
-        Salve suas estimativas para atualizar o resumo e as diferenças.
-        Categorias antigas sem grupo continuam em “Gastos a organizar”; você
-        pode definir o grupo na aba Categorias.
+        Defina quanto espera receber e gastar em cada categoria. As estimativas
+        ficam separadas das movimentações realizadas.
       </p>
-      <div className="planning-columns">
+      <div className="plan-sections">
         {groups.map((group) => {
-          const lines = report.lines.filter((l) =>
-            group.id === "income"
-              ? l.direction === "income"
-              : l.direction === "expense" &&
-                (l.expense_group || "unassigned") === group.id,
-          );
+          const lines = report.lines.filter((l) => l.direction === group.id);
           if (!lines.length) return null;
           return (
-            <section className="card" key={group.id}>
-              <h2>{group.title}</h2>
-              {lines.map((line) => (
-                <label className="budget-row" key={key(line)}>
-                  <span>
-                    <strong>
-                      {line.name}
-                      {line.archived ? " · Arquivada" : ""}
-                    </strong>
-                    <small>Realizado: {brl(line.actual)}</small>
-                    <small
-                      className={
-                        Number(line.difference) < 0 ? "negative" : "positive"
-                      }
-                    >
-                      {line.direction === "income" ? "Diferença" : "Falta"}:{" "}
-                      {brl(line.difference)}
-                      {line.direction === "expense" &&
-                      Number(line.difference) < 0
-                        ? " · Acima do orçamento"
-                        : ""}
-                    </small>
-                  </span>
-                  {line.category_id ? (
-                    <span className="budget-input">
-                      R$
-                      <input
-                        aria-label={`${line.name} — ${line.direction === "income" ? "receita" : "despesa"} estimada`}
-                        inputMode="decimal"
-                        disabled={saving || line.archived}
-                        value={values[key(line)] ?? String(line.estimated)}
-                        onChange={(e) => {
-                          dirty.current.add(key(line));
-                          setValues((v) => ({
-                            ...v,
-                            [key(line)]: e.target.value,
-                          }));
-                          setMessage("Há alterações não salvas.");
-                        }}
-                      />
+            <section className={`plan-section plan-${group.id}`} key={group.id}>
+              <div className="section-top">
+                <h2>{group.title}</h2>
+                <span className="muted">
+                  {group.id === "income"
+                    ? "O que você espera receber"
+                    : "Como pretende distribuir seu dinheiro"}
+                </span>
+              </div>
+              <div className="plan-category-grid">
+                {lines.map((line) => (
+                  <label className="card plan-category" key={key(line)}>
+                    <span className="plan-category-heading">
+                      <span className="category-emoji" aria-hidden="true">
+                        {categoryEmoji(
+                          line.name,
+                          panco.data.categories.find(
+                            (c) => c.id === line.category_id,
+                          )?.icon,
+                        )}
+                      </span>
+                      <strong>
+                        {line.name}
+                        {line.archived ? " · Arquivada" : ""}
+                      </strong>
                     </span>
-                  ) : (
-                    <span className="muted">Categorize os movimentos</span>
-                  )}
-                </label>
-              ))}
+                    <span className="plan-actual">
+                      <small>
+                        {line.direction === "income"
+                          ? "Recebido"
+                          : "Gasto até agora"}
+                      </small>
+                      <b
+                        className={
+                          line.direction === "income" ? "positive" : "negative"
+                        }
+                      >
+                        {brl(line.actual)}
+                      </b>
+                      <small
+                        className={
+                          Number(line.difference) < 0 ? "negative" : "positive"
+                        }
+                      >
+                        {line.direction === "income" ? "Diferença" : "Falta"}:{" "}
+                        {brl(line.difference)}
+                        {line.direction === "expense" &&
+                        Number(line.difference) < 0
+                          ? " · Acima do orçamento"
+                          : ""}
+                      </small>
+                    </span>
+                    {line.category_id ? (
+                      <span className="plan-estimate-label">
+                        {line.direction === "income"
+                          ? "Quero receber"
+                          : "Planejo gastar"}
+                        <span className="budget-input">
+                          R$
+                          <input
+                            aria-label={`${line.name} — ${line.direction === "income" ? "receita" : "despesa"} estimada`}
+                            inputMode="decimal"
+                            disabled={saving || line.archived}
+                            value={values[key(line)] ?? String(line.estimated)}
+                            onChange={(e) => {
+                              dirty.current.add(key(line));
+                              setValues((v) => ({
+                                ...v,
+                                [key(line)]: e.target.value,
+                              }));
+                              setMessage("Há alterações não salvas.");
+                            }}
+                          />
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="muted">Categorize os movimentos</span>
+                    )}
+                  </label>
+                ))}
+              </div>
             </section>
           );
         })}

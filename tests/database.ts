@@ -1,4 +1,5 @@
 import { testMonthlyPlanning } from "./monthly-cases.ts";
+import { testCategoryCatalog, testForecastPeriod } from "./catalog-cases.ts";
 import { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import assert from "node:assert/strict";
@@ -463,6 +464,8 @@ async function run() {
       await readFile(process.env.PANCO_CANDIDATE_MIGRATION, "utf8"),
     );
   await testMonthlyPlanning(db);
+  await testCategoryCatalog(db);
+  await testForecastPeriod(db);
   await db.close();
   console.log("Todos os testes PostgreSQL passaram.");
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { Feature } from "../../../../packages/react-features/src/types";
+import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
 import { brl, shortDate } from "../shared/format";
 export function Management({
   panco,
@@ -253,54 +254,54 @@ export function Management({
           Dê a cada movimento o seu lugar. Ao reclassificar uma compra, o Panco
           aprende uma regra para aquele estabelecimento.
         </p>
-        <div className="category-grid">
-          {d.categories
-            .slice()
-            .sort(
-              (a, b) =>
-                (a.sort_order || 0) - (b.sort_order || 0) ||
-                a.name.localeCompare(b.name),
-            )
-            .map((c) => (
-              <button
-                className="card category-card"
-                key={c.id}
-                onClick={() => open("category", c.id)}
-              >
-                <span
-                  className="category-mark"
-                  style={{ background: c.color + "20", color: c.color }}
-                >
-                  {c.name.slice(0, 1)}
-                </span>
-                <div className="grow">
-                  <h3>{c.name}</h3>
-                  <span>
-                    {
-                      {
-                        income: "Receitas",
-                        expense: "Despesas",
-                        both: "Receitas e despesas",
-                      }[c.kind]
-                    }
-                  </span>
-                  {c.kind !== "income" && (
-                    <small>
-                      {c.expense_group === "essential"
-                        ? "Essencial"
-                        : c.expense_group === "non_essential"
-                          ? "Não essencial"
-                          : "Grupo a definir"}
-                    </small>
-                  )}
-                </div>
-                <Pencil size={16} />
-              </button>
-            ))}
-          <button className="add-tile" onClick={() => open("category")}>
-            <Plus size={22} /> Criar categoria
-          </button>
-        </div>
+        {["income", "expense"].map((kind) => (
+          <section className="section-space" key={kind}>
+            <h2>{kind === "income" ? "Entradas" : "Saídas"}</h2>
+            <div className="category-grid">
+              {d.categories
+                .filter((c) => !c.archived_at && c.kind === kind)
+                .slice()
+                .sort(
+                  (a, b) =>
+                    (a.sort_order || 0) - (b.sort_order || 0) ||
+                    a.name.localeCompare(b.name),
+                )
+                .map((c) => (
+                  <button
+                    className="card category-card"
+                    key={c.id}
+                    onClick={() => open("category", c.id)}
+                  >
+                    <span
+                      className="category-mark"
+                      style={{ background: c.color + "20", color: c.color }}
+                    >
+                      {categoryEmoji(c.name, c.icon)}
+                    </span>
+                    <div className="grow">
+                      <h3>{c.name}</h3>
+                      <span>
+                        {
+                          {
+                            income: "Receitas",
+                            expense: "Despesas",
+                            both: "Receitas e despesas",
+                          }[c.kind]
+                        }
+                      </span>
+                    </div>
+                    <Pencil size={16} />
+                  </button>
+                ))}
+            </div>
+          </section>
+        ))}
+        <button
+          className="add-tile section-space"
+          onClick={() => open("category")}
+        >
+          <Plus size={22} /> Criar categoria
+        </button>
       </>
     );
   if (feature === "investments")

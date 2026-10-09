@@ -8,7 +8,7 @@ export async function testMonthlyPlanning(db: PGlite) {
   await db.exec("reset role");
   await db.query("insert into auth.users(id) values($1),($2)", [u, other]);
   const existing = await one(
-    "insert into categories(user_id,name,kind) values($1,'Mesada','income') returning id",
+    "insert into categories(user_id,name,kind) values($1,'Minha receita personalizada','income') returning id",
     [u],
   );
   await db.exec(
@@ -19,14 +19,14 @@ export async function testMonthlyPlanning(db: PGlite) {
   await db.query("select panco_initialize_planning()");
   assert.equal((await one("select count(*)::int n from categories")).n, count);
   assert.equal(
-    (await one("select id from categories where name='Mesada'")).id,
+    (await one("select id from categories where name='Minha receita personalizada'")).id,
     existing.id,
   );
   const food = await one(
-    "select id from categories where name='Alimentação e feira'",
+    "select id from categories where name='Alimentação'",
   );
   const leisure = await one(
-    "select id from categories where name='Atividades de Lazer'",
+    "select id from categories where name='Lazer'",
   );
   await db.query("update categories set expense_group=null where id=$1", [
     leisure.id,
