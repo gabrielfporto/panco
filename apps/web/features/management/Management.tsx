@@ -11,7 +11,46 @@ import {
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { Feature } from "../../../../packages/react-features/src/types";
 import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
-import { brl, shortDate } from "../shared/format";
+import { brl, shortDate, today } from "../shared/format";
+
+function hasInvoiceActivity(invoice: {
+  remaining_due: string | number;
+  reported_total: string | number | null;
+  estimated_total: string | number;
+  total_paid: string | number;
+}) {
+  return [
+    invoice.remaining_due,
+    invoice.reported_total,
+    invoice.estimated_total,
+    invoice.total_paid,
+  ].some((value) => value != null && Math.abs(Number(value)) > 0.005);
+}
+
+function invoiceStatus(invoice: {
+  due_date: string;
+  status: string;
+  remaining_due: string | number;
+  reported_total: string | number | null;
+  estimated_total: string | number;
+  total_paid: string | number;
+}) {
+  const total = Math.max(
+    Number(invoice.reported_total || 0),
+    Number(invoice.estimated_total || 0),
+  );
+  const remaining = Number(invoice.remaining_due || 0);
+
+  if (total > 0 && remaining <= 0.005) return "Paga";
+  if (invoice.due_date < today() && remaining > 0.005) return "Vencida";
+  if (invoice.due_date > today()) return "Futura";
+
+  return (
+    { FUTURE: "Futura", OPEN: "Aberta", CLOSED: "Fechada" }[
+      invoice.status
+    ] || invoice.status
+  );
+}
 export function Management({
   panco,
   feature,
@@ -31,6 +70,10 @@ export function Management({
     d.investments.filter(
       (i) => i.current_value == null || Number(i.current_value) !== 0,
     ).length;
+  const visibleInvoices = d.invoices
+    .filter(hasInvoiceActivity)
+    .slice()
+    .sort((a, b) => a.due_date.localeCompare(b.due_date));
   if (feature === "cards")
     return (
       <>
@@ -100,11 +143,8 @@ export function Management({
           <div className="section-top">
             <h2>Suas faturas</h2>
           </div>
-          {d.invoices.length ? (
-            d.invoices
-              .slice()
-              .sort((a, b) => a.due_date.localeCompare(b.due_date))
-              .map((i) => (
+          {visibleInvoices.length ? (
+            visibleInvoices.map((i) => (
                 <div className="movement" key={i.id}>
                   <span className="avatar-icon">
                     <CreditCard size={18} />
@@ -121,16 +161,14 @@ export function Management({
                     </small>
                   </div>
                   <span className="tag">
-                    {{ FUTURE: "Futura", OPEN: "Aberta", CLOSED: "Fechada" }[
-                      i.status
-                    ] || i.status}
+                    {invoiceStatus(i)}
                   </span>
                   <b>{brl(i.remaining_due)}</b>
                 </div>
               ))
           ) : (
             <p className="empty">
-              Suas faturas aparecerão aqui após a sincronização.
+              Nenhuma fatura com valor neste período.
             </p>
           )}
         </section>
