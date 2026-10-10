@@ -298,7 +298,7 @@ export function Management({
           </section>
         ))}
         <button
-          className="add-tile section-space"
+          className="add-tile category-add section-space"
           onClick={() => open("category")}
         >
           <Plus size={22} /> Criar categoria
