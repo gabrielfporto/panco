@@ -3,6 +3,7 @@ import { X, Trash2 } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
 import { today } from "./format";
+import { pancoErrorMessage } from "../../../../packages/react-features/src/errors";
 export function Editor({
   type,
   id,
@@ -101,7 +102,7 @@ export function Editor({
         });
       close();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível salvar.");
+      setError(pancoErrorMessage(e, "Não foi possível salvar."));
     } finally {
       setBusy(false);
     }

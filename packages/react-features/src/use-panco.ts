@@ -14,6 +14,7 @@ import { syncItems } from "./sync.ts";
 import { isIgnoredTransaction } from "../../core/src/features/transactions/visibility.ts";
 import { cents, decimal } from "../../core/src/money.ts";
 import { merchantKey } from "../../core/src/features/transactions/billing.ts";
+import { pancoErrorMessage } from "./errors.ts";
 export type PancoController = ReturnType<typeof usePanco>;
 export function usePanco(client: SupabaseClient | null) {
   const demo = !client;
@@ -395,12 +396,34 @@ export function usePanco(client: SupabaseClient | null) {
       return;
     }
     const generation = cache.current.generation;
-    const { data: saved, error } = await client!
-      .from(table)
-      .upsert({ ...values, user_id: session!.user.id })
-      .select("*")
-      .single();
-    if (error) throw error;
+    const userId = session!.user.id;
+    const id = typeof values.id === "string" ? values.id : "";
+    const payload = { ...values };
+    delete payload.id;
+    delete payload.user_id;
+    const result = id
+      ? await client!
+          .from(table)
+          .update(payload)
+          .eq("id", id)
+          .eq("user_id", userId)
+          .select("*")
+          .maybeSingle()
+      : await client!
+          .from(table)
+          .insert({ ...payload, user_id: userId })
+          .select("*")
+          .single();
+    if (result.error) throw new Error(pancoErrorMessage(result.error));
+    const saved = result.data;
+    if (!saved) {
+      await refresh();
+      throw new Error(
+        table === "categories"
+          ? "Esta categoria não existe mais. A lista foi atualizada."
+          : "Este registro não existe mais. A lista foi atualizada.",
+      );
+    }
     if (generation !== cache.current.generation) return;
     cache.current.request++;
     setData((d) => ({
