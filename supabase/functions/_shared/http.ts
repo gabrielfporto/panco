@@ -7,6 +7,21 @@ export class HttpError extends Error {
     super(message);
   }
 }
+export class DatabaseError extends Error {
+  constructor(public code: string) {
+    super("Falha no banco de dados.");
+  }
+}
+export async function syncStage<T>(stage: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    const code = error instanceof DatabaseError ? error.code : "INTERNAL";
+    console.error("panco_sync_failed", JSON.stringify({ stage, code }));
+    throw new HttpError(500, `Falha em ${stage} (${code}). Os dados já importados foram preservados.`);
+  }
+}
 export function env(key: string) {
   const value = Deno.env.get(key);
   if (!value) throw new HttpError(503, `Configuração ausente: ${key}`);
@@ -27,9 +42,11 @@ export const admin = () =>
   });
 export function check<T>(result: {
   data: T;
-  error: { message: string } | null;
+  error: { message: string; code?: string } | null;
 }): T {
-  if (result.error) throw new Error(result.error.message);
+  if (result.error) throw new DatabaseError(
+    /^[A-Z0-9]{5,12}$/.test(result.error.code || "") ? result.error.code! : "DATABASE",
+  );
   return result.data;
 }
 export async function owner(request: Request) {
@@ -113,3 +130,4 @@ export async function secretEqual(a: string, b: string) {
   for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
   return diff === 0;
 }
+
