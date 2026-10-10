@@ -67,6 +67,27 @@ export function demoMonthlyOverview(
     lines
       .filter((l) => l.direction === direction)
       .reduce((n, l) => n + cents(l[key]), 0n);
+  const remaining = (direction: "income" | "expense") =>
+    lines
+      .filter((l) => l.direction === direction)
+      .reduce(
+        (n, l) => {
+          const rest = cents(l.estimated) - cents(l.actual);
+          return n + (rest > 0n ? rest : 0n);
+        },
+        0n,
+      );
+  const currentBalance = data.accounts
+    .filter(
+      (a) =>
+        a.currency === "BRL" && a.include_in_forecast && !a.archived_at,
+    )
+    .reduce((n, a) => n + cents(a.current_balance), 0n);
+  const invoiceDue = data.invoices
+    .filter((i) => i.due_date.slice(0, 7) === month)
+    .reduce((n, i) => n + cents(i.remaining_due), 0n);
+  const remainingIncome = remaining("income");
+  const remainingExpense = remaining("expense");
   return {
     month: month + "-01",
     currency: "BRL",
@@ -79,6 +100,13 @@ export function demoMonthlyOverview(
     ),
     actual_result: decimal(
       total("income", "actual") - total("expense", "actual"),
+    ),
+    remaining_income: decimal(remainingIncome),
+    remaining_expense: decimal(remainingExpense),
+    current_balance: decimal(currentBalance),
+    invoice_due: decimal(invoiceDue),
+    projected_cash_balance: decimal(
+      currentBalance + remainingIncome - remainingExpense - invoiceDue,
     ),
     lines,
   };

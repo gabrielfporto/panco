@@ -86,7 +86,7 @@ export async function testMonthlyPlanning(db: PGlite) {
     [u],
   );
   const invoice = await one(
-    "insert into invoices(user_id,card_id,reference_month,due_date,status,currency) values($1,$2,'2026-10-01','2026-10-10','OPEN','BRL') returning id",
+    "insert into invoices(user_id,card_id,reference_month,due_date,status,currency,reported_total) values($1,$2,'2026-10-01','2026-10-10','OPEN','BRL',300) returning id",
     [u, card.id],
   );
   const payment = await movement("100", food.id);
@@ -111,6 +111,10 @@ export async function testMonthlyPlanning(db: PGlite) {
   assert.equal(Number(result.actual_expense), 157);
   assert.equal(Number(result.estimated_result), 400);
   assert.equal(Number(result.actual_result), 843);
+  assert.equal(Number(result.remaining_income), 0);
+  assert.equal(Number(result.remaining_expense), 50);
+  assert.equal(Number(result.invoice_due), 200);
+  assert.equal(Number(result.projected_cash_balance), 305);
   assert.equal(
     Number(result.lines.find((x: any) => x.category_id === food.id).difference),
     30,

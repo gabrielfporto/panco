@@ -30,6 +30,10 @@ export function Dashboard({
     bankAccounts.reduce((sum, a) => sum + cents(a.current_balance), 0n),
   );
   const { report, error } = useMonthlyOverview(panco);
+  const remainingIncome = report?.remaining_income ?? f.pending_income;
+  const remainingExpense = report?.remaining_expense ?? f.pending_expenses;
+  const invoiceDue = report?.invoice_due ?? f.invoices_due;
+  const projectedCash = report?.projected_cash_balance ?? f.projected_balance;
   const income = Number(report?.actual_income || 0),
     expense = Number(report?.actual_expense || 0);
   const actual = data.transactions.filter(
@@ -132,7 +136,7 @@ export function Dashboard({
           {!bankAccounts.length && <p>Nenhuma conta cadastrada.</p>}
           <div className="projection-footer">
             <span>
-              Previsão ao fim do mês <b>{brl(f.projected_balance)}</b>
+              Saldo previsto ao fim do mês <b>{brl(projectedCash)}</b>
             </span>
             <ArrowUpRight size={25} />
           </div>
@@ -141,19 +145,19 @@ export function Dashboard({
           <div className="metric-icon">
             <ArrowDownLeft size={22} />
           </div>
-          <span>Receitas a receber</span>
-          <strong className="positive">{brl(f.pending_income)}</strong>
-          <small>Até o fim do mês</small>
+          <span>Receitas ainda planejadas</span>
+          <strong className="positive">{brl(remainingIncome)}</strong>
+          <small>Planejamento que ainda não foi realizado</small>
         </section>
         <section className="card metric">
           <div className="metric-icon sand">
             <ArrowUpRight size={22} />
           </div>
-          <span>Despesas + faturas</span>
+          <span>Saídas que ainda faltam</span>
           <strong className="negative">
-            {brl(Number(f.pending_expenses) + Number(f.invoices_due))}
+            {brl(Number(remainingExpense) + Number(invoiceDue))}
           </strong>
-          <small>Faturas: {brl(f.invoices_due)}</small>
+          <small>Fatura do mês: {brl(invoiceDue)}</small>
         </section>
       </div>
       {(f.review_count > 0 || f.missing_balance_count > 0) && (

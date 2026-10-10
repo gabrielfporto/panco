@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { MonthlyOverview } from "../../../../packages/react-features/src/types";
 import { useMonthlyOverview } from "../../../../packages/react-features/src/use-monthly-overview";
 import { cents, decimal } from "../../../../packages/core/src/money";
-import { monthLabel } from "../shared/format";
+import { brl, monthLabel } from "../shared/format";
 import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
-import { MonthlySummary } from "./MonthlySummary";
 export function Planning({ panco }: { panco: PancoController }) {
   const { report, error } = useMonthlyOverview(panco);
   return (
@@ -50,6 +49,25 @@ function MonthlyPlan({
       ),
     );
   }, [report]);
+  const planned = useMemo(() => {
+    const total = (direction: "income" | "expense") =>
+      report.lines
+        .filter((line) => line.category_id && line.direction === direction)
+        .reduce((sum, line) => {
+          try {
+            return sum + cents((values[key(line)] || "0").replace(",", "."));
+          } catch {
+            return sum;
+          }
+        }, 0n);
+    const income = total("income"),
+      expense = total("expense");
+    return {
+      income: decimal(income),
+      expense: decimal(expense),
+      result: decimal(income - expense),
+    };
+  }, [report.lines, values]);
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -81,7 +99,22 @@ function MonthlyPlan({
   ];
   return (
     <form onSubmit={save}>
-      <MonthlySummary report={report} variant="planning" />
+      <section className="plan-live-summary" aria-label="Resumo do planejamento">
+        <div>
+          <span>Entrada estimada</span>
+          <strong className="positive">{brl(planned.income)}</strong>
+        </div>
+        <div>
+          <span>Saída estimada</span>
+          <strong className="negative">{brl(planned.expense)}</strong>
+        </div>
+        <div className="plan-live-result">
+          <span>Sobra planejada</span>
+          <strong className={Number(planned.result) < 0 ? "negative" : "positive"}>
+            {brl(planned.result)}
+          </strong>
+        </div>
+      </section>
       <div className="plan-sections">
         {groups.map((group) => {
           const lines = report.lines.filter((l) => l.direction === group.id);

@@ -172,5 +172,10 @@ export interface MonthlyOverview {
   actual_expense: Money;
   estimated_result: Money;
   actual_result: Money;
+  remaining_income: Money;
+  remaining_expense: Money;
+  current_balance: Money;
+  invoice_due: Money;
+  projected_cash_balance: Money;
   lines: MonthlyLine[];
 }
