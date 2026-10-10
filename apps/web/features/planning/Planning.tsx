@@ -3,7 +3,7 @@ import type { PancoController } from "../../../../packages/react-features/src/us
 import type { MonthlyOverview } from "../../../../packages/react-features/src/types";
 import { useMonthlyOverview } from "../../../../packages/react-features/src/use-monthly-overview";
 import { cents, decimal } from "../../../../packages/core/src/money";
-import { brl, monthLabel } from "../shared/format";
+import { monthLabel } from "../shared/format";
 import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
 import { MonthlySummary } from "./MonthlySummary";
 export function Planning({ panco }: { panco: PancoController }) {
@@ -81,17 +81,7 @@ function MonthlyPlan({
   ];
   return (
     <form onSubmit={save}>
-      <MonthlySummary report={report} />
-      <p className="fine-print">
-        {monthLabel(report.month)} · Valores em reais. O realizado usa
-        movimentações confirmadas do mês, sem transferências, pagamentos de
-        fatura vinculados ou aplicações e resgates automáticos ignorados. O
-        resultado do mês é diferente do saldo bancário.
-      </p>
-      <p className="fine-print">
-        Defina quanto espera receber e gastar em cada categoria. As estimativas
-        ficam separadas das movimentações realizadas.
-      </p>
+      <MonthlySummary report={report} variant="planning" />
       <div className="plan-sections">
         {groups.map((group) => {
           const lines = report.lines.filter((l) => l.direction === group.id);
@@ -122,32 +112,6 @@ function MonthlyPlan({
                         {line.name}
                         {line.archived ? " · Arquivada" : ""}
                       </strong>
-                    </span>
-                    <span className="plan-actual">
-                      <small>
-                        {line.direction === "income"
-                          ? "Recebido"
-                          : "Gasto até agora"}
-                      </small>
-                      <b
-                        className={
-                          line.direction === "income" ? "positive" : "negative"
-                        }
-                      >
-                        {brl(line.actual)}
-                      </b>
-                      <small
-                        className={
-                          Number(line.difference) < 0 ? "negative" : "positive"
-                        }
-                      >
-                        {line.direction === "income" ? "Diferença" : "Falta"}:{" "}
-                        {brl(line.difference)}
-                        {line.direction === "expense" &&
-                        Number(line.difference) < 0
-                          ? " · Acima do orçamento"
-                          : ""}
-                      </small>
                     </span>
                     {line.category_id ? (
                       <span className="plan-estimate-label">

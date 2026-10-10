@@ -3,7 +3,7 @@
   --color-panco-cream: #faf9f6;
   --color-panco-forest: #131f37;
   --font-sans: "Inter", sans-serif;
-  --font-serif: "Playfair Display", Georgia, serif;
+  --font-serif: "Inter", sans-serif;
 }
 :root {
   --ink: #222a3a;
@@ -11,7 +11,7 @@
   --forest: #131f37;
   --line: #e5e7ec;
   --cream: #faf9f6;
-  --serif: "Playfair Display", Georgia, serif;
+  --serif: "Inter", sans-serif;
 }
 * {
   box-sizing: border-box;
@@ -2609,9 +2609,18 @@ body {
   flex-direction: row;
   gap: 12px;
 }
-.transaction-heading strong { font-size: 13px; font-weight: 600; line-height: 1.4; }
-.transaction-heading > b { font-size: 15px; font-weight: 600; }
-.transaction-heading p { margin: 3px 0 0; }
+.transaction-heading strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.transaction-heading > b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.transaction-heading p {
+  margin: 3px 0 0;
+}
 .transaction-details {
   display: flex;
   flex-wrap: wrap;
@@ -2631,18 +2640,53 @@ body {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.transaction-details dd { font-size: 11px; line-height: 1.5; }
-.transaction-details > div:last-child:nth-child(4) dd::before { content: "Parcela "; }
-.transaction-category { flex-direction: row; align-items: center; gap: 6px; font-size: 10px; }
-.transaction-category select { width: auto; max-width: 200px; padding: 6px 9px; font-size: 12px; border-radius: 7px; }
+.transaction-details dd {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.transaction-details > div:last-child:nth-child(4) dd::before {
+  content: "Parcela ";
+}
+.transaction-category {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+.transaction-category select {
+  width: auto;
+  max-width: 200px;
+  padding: 6px 9px;
+  font-size: 12px;
+  border-radius: 7px;
+}
 @media (max-width: 720px) {
-  .transaction-card { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 12px 14px; }
-  .transaction-heading { grid-column: 1; }
-  .transaction-heading > b { font-size: 14px; }
-  .transaction-details { gap: 3px 10px; }
-  .transaction-details > div:first-child { flex-basis: 100%; }
-  .transaction-category { justify-content: space-between; }
-  .transaction-category select { min-height: 40px; max-width: 78%; font-size: 16px; padding: 5px 8px; }
+  .transaction-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 12px 14px;
+  }
+  .transaction-heading {
+    grid-column: 1;
+  }
+  .transaction-heading > b {
+    font-size: 14px;
+  }
+  .transaction-details {
+    gap: 3px 10px;
+  }
+  .transaction-details > div:first-child {
+    flex-basis: 100%;
+  }
+  .transaction-category {
+    justify-content: space-between;
+  }
+  .transaction-category select {
+    min-height: 40px;
+    max-width: 78%;
+    font-size: 16px;
+    padding: 5px 8px;
+  }
 }
 .plan-category .budget-input input {
   min-width: 0;
@@ -2702,57 +2746,563 @@ body {
     gap: 6px;
   }
 }
-.bank-card .account-logo { flex: 0 0 38px; width: 38px; height: 38px; background: #fff; border-radius: 10px; overflow: hidden; }
-.bank-card .account-logo img { width: 100%; height: 100%; object-fit: contain; }
-.ledger-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
-.ledger-summary > div { display: flex; align-items: center; gap: 14px; padding: 18px 20px; background: #fff; border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
-.ledger-summary span { font-size: 12px; color: var(--muted); min-width: 0; }
-.ledger-summary strong { display: block; margin-top: 4px; font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
-.ledger-summary strong.positive { color: var(--positive, #12846a); }
-.ledger-summary strong.negative { color: var(--negative, #d63850); }
-.ledger-summary-note { font-size: 11px; color: var(--muted); margin: 10px 0 20px; line-height: 1.6; }
-.ledger-list { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 0 18px; }
-.ledger-columns, .ledger-row { display: grid; grid-template-columns: minmax(180px,2.2fr) minmax(130px,1.2fr) minmax(100px,1fr) 90px minmax(105px,.7fr) 22px; align-items: center; gap: 16px; }
-.ledger-columns { padding: 18px 0; font-size: 11px; text-transform: uppercase; color: var(--muted); }
-.ledger-columns > :nth-child(5) { text-align: right; }
-.ledger-row { position: relative; padding: 16px 0; border-top: 1px solid var(--line); min-width: 0; }
-.ledger-description { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.ledger-description > div { min-width: 0; }
-.ledger-description strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; line-height: 1.5; }
-.ledger-description small { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
-.ledger-icon { display: grid; place-items: center; flex: 0 0 30px; height: 30px; border-radius: 7px; font-size: 17px; background: #f4f5f8; }
-.ledger-icon.income { background: #e3f5ee; }
-.ledger-category { min-width: 0; }
-.ledger-category select { width: 100%; max-width: 230px; border: 0; border-radius: 20px; background: #f1f3f7; color: #69758a; padding: 5px 9px; font-size: 11px; text-overflow: ellipsis; cursor: pointer; }
-.ledger-account { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 11px; color: var(--muted); }
-.ledger-account span:last-child { overflow-wrap: anywhere; }
-.ledger-account .account-logo { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 5px; }
-.ledger-account .account-logo img { width: 20px; height: 20px; object-fit: contain; }
-.ledger-account .account-logo svg { width: 16px; height: 16px; }
-.ledger-date { font-size: 11px; color: var(--muted); }
-.ledger-value { font-size: 13px; text-align: right; white-space: nowrap; font-weight: 600; }
-.ledger-more summary { list-style: none; cursor: pointer; color: var(--muted); display: grid; place-items: center; min-height: 32px; }
-.ledger-more summary::-webkit-details-marker { display: none; }
-.ledger-more > div { position: absolute; z-index: 5; right: 0; top: 45px; width: min(300px,100%); padding: 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px #20355720; display: grid; gap: 8px; font-size: 12px; overflow-wrap: anywhere; }
+.bank-card .account-logo {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bank-card .account-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ledger-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.ledger-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  min-width: 0;
+}
+.ledger-summary span {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 0;
+}
+.ledger-summary strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ledger-summary strong.positive {
+  color: var(--positive, #12846a);
+}
+.ledger-summary strong.negative {
+  color: var(--negative, #d63850);
+}
+.ledger-summary-note {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 10px 0 20px;
+  line-height: 1.6;
+}
+.ledger-list {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 0 18px;
+}
+.ledger-columns,
+.ledger-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2.2fr) minmax(130px, 1.2fr) minmax(
+      100px,
+      1fr
+    ) 90px minmax(105px, 0.7fr) 22px;
+  align-items: center;
+  gap: 16px;
+}
+.ledger-columns {
+  padding: 18px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ledger-columns > :nth-child(5) {
+  text-align: right;
+}
+.ledger-row {
+  position: relative;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.ledger-description {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ledger-description > div {
+  min-width: 0;
+}
+.ledger-description strong {
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.ledger-description small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.ledger-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  height: 30px;
+  border-radius: 7px;
+  font-size: 17px;
+  background: #f4f5f8;
+}
+.ledger-icon.income {
+  background: #e3f5ee;
+}
+.ledger-category {
+  min-width: 0;
+}
+.ledger-category select {
+  width: 100%;
+  max-width: 230px;
+  border: 0;
+  border-radius: 20px;
+  background: #f1f3f7;
+  color: #69758a;
+  padding: 5px 9px;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.ledger-account {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ledger-account span:last-child {
+  overflow-wrap: anywhere;
+}
+.ledger-account .account-logo {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 5px;
+}
+.ledger-account .account-logo img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.ledger-account .account-logo svg {
+  width: 16px;
+  height: 16px;
+}
+.ledger-date {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ledger-value {
+  font-size: 13px;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.ledger-more summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+}
+.ledger-more summary::-webkit-details-marker {
+  display: none;
+}
+.ledger-more > div {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: 45px;
+  width: min(300px, 100%);
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px #20355720;
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 1100px) {
- .ledger-columns { display: none; }
- .ledger-list { padding: 12px; }
- .ledger-group + .ledger-group { margin-top: 10px; }
- .ledger-row { grid-template-columns: minmax(0,1fr) auto; grid-template-areas: "date more" "description description" "category account" "value value"; gap: 10px 8px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
- .ledger-date { grid-area: date; }
- .ledger-more { grid-area: more; }
- .ledger-description { grid-area: description; }
- .ledger-category { grid-area: category; }
- .ledger-account { grid-area: account; max-width: 130px; }
- .ledger-value { grid-area: value; font-size: 18px; }
- .ledger-category select { max-width: 100%; min-height: 32px; font-size: 12px; }
- .ledger-more summary { min-height: 24px; min-width: 24px; }
- .ledger-summary > div { padding: 15px; gap: 10px; }
- .ledger-summary strong { font-size: 18px; }
+  .ledger-columns {
+    display: none;
+  }
+  .ledger-list {
+    padding: 12px;
+  }
+  .ledger-group + .ledger-group {
+    margin-top: 10px;
+  }
+  .ledger-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "date more" "description description" "category account" "value value";
+    gap: 10px 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .ledger-date {
+    grid-area: date;
+  }
+  .ledger-more {
+    grid-area: more;
+  }
+  .ledger-description {
+    grid-area: description;
+  }
+  .ledger-category {
+    grid-area: category;
+  }
+  .ledger-account {
+    grid-area: account;
+    max-width: 130px;
+  }
+  .ledger-value {
+    grid-area: value;
+    font-size: 18px;
+  }
+  .ledger-category select {
+    max-width: 100%;
+    min-height: 32px;
+    font-size: 12px;
+  }
+  .ledger-more summary {
+    min-height: 24px;
+    min-width: 24px;
+  }
+  .ledger-summary > div {
+    padding: 15px;
+    gap: 10px;
+  }
+  .ledger-summary strong {
+    font-size: 18px;
+  }
 }
 @media (max-width: 380px) {
- .ledger-row { grid-template-areas: "date more" "description description" "category category" "account value"; }
- .ledger-summary { gap: 8px; }
- .ledger-summary > div { padding: 12px 10px; gap: 7px; }
- .ledger-summary strong { font-size: 16px; }
+  .ledger-row {
+    grid-template-areas: "date more" "description description" "category category" "account value";
+  }
+  .ledger-summary {
+    gap: 8px;
+  }
+  .ledger-summary > div {
+    padding: 12px 10px;
+    gap: 7px;
+  }
+  .ledger-summary strong {
+    font-size: 16px;
+  }
+}
+
+/* One type scale and a quieter monthly summary across the app. */
+:root {
+  --serif: "Inter", sans-serif;
+}
+body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+h1,
+h2 {
+  font-family: "Inter", sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+h1 {
+  font-size: clamp(29px, 3vw, 38px);
+  line-height: 1.12;
+}
+h2 {
+  font-size: clamp(18px, 1.8vw, 24px);
+  line-height: 1.25;
+}
+small {
+  font-size: 12px;
+}
+.feature-title h1 {
+  font-size: clamp(29px, 3vw, 38px);
+}
+.feature-title p,
+.welcome p {
+  font-size: 14px;
+}
+.monthly-summary {
+  display: grid;
+  gap: 0;
+  margin: 0 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  overflow: hidden;
+}
+.monthly-summary-overview {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.monthly-summary-planning {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.monthly-metric {
+  min-width: 0;
+  padding: 20px 22px;
+  border-left: 1px solid var(--line);
+}
+.monthly-metric:first-child {
+  border-left: 0;
+}
+.monthly-metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+.monthly-metric strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(18px, 1.9vw, 25px);
+  line-height: 1.15;
+  font-weight: 650;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.plan-category {
+  gap: 12px;
+}
+.plan-category-heading strong {
+  font-size: 15px;
+}
+
+/* Month selection matches the light app surface on every browser. */
+.month-select {
+  position: relative;
+  min-width: 0;
+}
+.month-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  white-space: nowrap;
+  text-transform: capitalize;
+  font-size: 13px;
+}
+.month-select-panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 246px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 16px 36px #18254024;
+}
+.month-select-year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.month-select-year button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #f3f5f9;
+  color: var(--ink);
+}
+.month-select-year strong {
+  font-size: 14px;
+}
+.month-select-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.month-select-grid button {
+  min-height: 38px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+}
+.month-select-grid button:hover,
+.month-select-grid button.active {
+  background: #e8edf7;
+  color: #253f77;
+}
+.month-picker .month-select {
+  width: 158px;
+}
+.transaction-period .month-select {
+  width: min(100%, 190px);
+}
+.transaction-controls .filters > select {
+  min-width: 0;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+
+/* Compact calendar: the selected day has one detail surface below on mobile. */
+.calendar-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 290px);
+  gap: 18px;
+}
+.calendar-layout > .card {
+  min-width: 0;
+}
+.calendar-grid {
+  gap: 5px;
+}
+.weekday {
+  padding: 6px 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.calendar-day {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  min-height: 62px;
+  padding: 5px;
+  border-color: transparent;
+  border-radius: 12px;
+  background: #f6f7fa;
+  text-align: center;
+}
+.calendar-day:hover {
+  background: #eef2f8;
+}
+.calendar-day.selected {
+  background: #e8edf7;
+  border-color: #7c8fb5;
+}
+.calendar-day > b {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.calendar-day.today > b {
+  width: 27px;
+  height: 27px;
+  background: var(--forest);
+}
+.calendar-day-count {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #fff;
+  color: #59657d;
+  font-size: 10px;
+  line-height: 16px;
+}
+.day-detail {
+  align-self: start;
+}
+.day-detail h2 {
+  font-size: 22px;
+}
+.day-item {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .monthly-summary-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .monthly-summary-overview .monthly-metric:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .monthly-summary-overview .monthly-metric:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
+  .calendar-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .welcome h1,
+  .feature-title h1 {
+    font-size: clamp(27px, 7.5vw, 33px);
+  }
+  .monthly-metric {
+    padding: 15px 13px;
+  }
+  .monthly-metric span {
+    font-size: 12px;
+  }
+  .monthly-metric strong {
+    font-size: clamp(16px, 4.5vw, 21px);
+    letter-spacing: -0.025em;
+  }
+  .month-picker .month-select {
+    width: 100%;
+  }
+  .month-select-panel {
+    width: min(246px, calc(100vw - 32px));
+  }
+  .transaction-controls .filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .transaction-controls .search {
+    grid-column: 1 / -1;
+  }
+  .transaction-controls .filters > select {
+    width: 100%;
+    height: 42px;
+    font-size: 13px;
+    padding: 8px 27px 8px 9px;
+  }
+  .calendar-layout > .card {
+    padding: 16px;
+  }
+  .calendar-grid {
+    gap: 3px;
+  }
+  .calendar-day {
+    min-height: 45px;
+    border-radius: 9px;
+  }
+  .calendar-day > b {
+    font-size: 12px;
+  }
+  .calendar-day-count {
+    right: 2px;
+    bottom: 1px;
+  }
 }

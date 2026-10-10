@@ -92,11 +92,7 @@ export function Dashboard({
       {report && (
         <>
           <h2 className="capitalize">{monthLabel(panco.month)}</h2>
-          <MonthlySummary report={report} />
-          <p className="fine-print">
-            Resultado mensal = entradas menos saídas confirmadas. O saldo
-            bancário atual aparece separadamente abaixo.
-          </p>
+          <MonthlySummary report={report} variant="overview" />
         </>
       )}
       <div className="stat-grid">

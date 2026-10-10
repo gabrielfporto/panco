@@ -33,6 +33,7 @@ import { AddAccount } from "../management/AddAccount";
 import { Editor } from "../shared/Editor";
 import { addMonths } from "../../../../packages/core/src/features/transactions/billing";
 import { monthLabel, today } from "../shared/format";
+import { MonthSelect } from "../shared/MonthSelect";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const client = url && key ? createClient(url, key) : null;
@@ -172,13 +173,10 @@ export function PancoApp() {
               >
                 <ChevronLeft size={17} />
               </button>
-              <input
-                aria-label="Mês e ano"
-                type="month"
+              <MonthSelect
                 value={panco.month}
-                onChange={(e) => {
-                  if (e.target.value) panco.setMonth(e.target.value);
-                }}
+                onChange={panco.setMonth}
+                label="Mês e ano"
               />
               <button
                 className="icon-button"
