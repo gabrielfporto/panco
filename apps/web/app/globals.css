@@ -2596,6 +2596,54 @@ body {
   background: #f4f6fa;
   padding: 8px 12px;
 }
+
+/* Compact transaction cards: title/value, then inline context and category. */
+.transaction-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  padding: 14px 18px;
+}
+.transaction-heading {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  gap: 12px;
+}
+.transaction-heading strong { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.transaction-heading > b { font-size: 15px; font-weight: 600; }
+.transaction-heading p { margin: 3px 0 0; }
+.transaction-details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  min-width: 0;
+  color: var(--muted);
+}
+.transaction-details dt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.transaction-details dd { font-size: 11px; line-height: 1.5; }
+.transaction-details > div:last-child:nth-child(4) dd::before { content: "Parcela "; }
+.transaction-category { flex-direction: row; align-items: center; gap: 6px; font-size: 10px; }
+.transaction-category select { width: auto; max-width: 200px; padding: 6px 9px; font-size: 12px; border-radius: 7px; }
+@media (max-width: 720px) {
+  .transaction-card { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 12px 14px; }
+  .transaction-heading { grid-column: 1; }
+  .transaction-heading > b { font-size: 14px; }
+  .transaction-details { gap: 3px 10px; }
+  .transaction-details > div:first-child { flex-basis: 100%; }
+  .transaction-category { justify-content: space-between; }
+  .transaction-category select { min-height: 40px; max-width: 78%; font-size: 16px; padding: 5px 8px; }
+}
 .plan-category .budget-input input {
   min-width: 0;
   width: 100%;
