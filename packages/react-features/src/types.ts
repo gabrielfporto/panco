@@ -1,5 +1,6 @@
 export type Money = string | number;
 export interface Account {
+  connection_id?: string | null;
   archived_at?: string | null;
   pluggy_account_id?: string | null;
   id: string;
@@ -11,6 +12,7 @@ export interface Account {
   kind: string;
 }
 export interface Card {
+  connection_id?: string | null;
   id: string;
   name: string;
   brand: string | null;

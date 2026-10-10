@@ -1,3 +1,4 @@
+import { AccountLogo, cardBankName } from "../shared/AccountLogo";
 import { useState } from "react";
 import {
   CreditCard,
@@ -39,7 +40,7 @@ export function Management({
               <div className="bank-card">
                 <div>
                   <span>PANCO / {c.name}</span>
-                  <CreditCard size={25} />
+                  <AccountLogo name={cardBankName(c, d.accounts)} />
                 </div>
                 <span className="chip" />
                 <div className="card-number">

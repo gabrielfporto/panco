@@ -1,9 +1,12 @@
 import { transactionMonth } from "../../../../packages/core/src/features/transactions/period";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Hash, TrendingUp, TrendingDown, ArrowLeftRight, MoreVertical } from "lucide-react";
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { Transaction } from "../../../../packages/react-features/src/types";
 import { groupSimilar } from "../../../../packages/core/src/features/transactions/grouping";
+import { AccountLogo, cardBankName } from "../shared/AccountLogo";
+import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
+import { cents, decimal } from "../../../../packages/core/src/money";
 import { brl, today } from "../shared/format";
 
 export function Transactions({ panco }: { panco: PancoController }) {
@@ -37,99 +40,37 @@ export function Transactions({ panco }: { panco: PancoController }) {
     (group) => !similarOnly || group.length > 1,
   );
   const count = groups.reduce((sum, group) => sum + group.length, 0);
+  const counted = groups.flat().filter(t => t.currency === "BRL" && t.status !== "cancelled" && t.source !== "projection" && t.kind === "regular");
+  const sum = (direction: string) => counted.filter(t => t.direction === direction).reduce((n,t) => n + cents(t.amount),0n);
+  const income = sum("income"), expense = sum("expense");
   function details(t: Transaction) {
-    const accountName =
-      data.accounts.find((a) => a.id === t.account_id)?.name ||
-      data.cards.find((c) => c.id === t.card_id)?.name ||
-      "Conta não informada";
-    return (
-      <article className="transaction-card" key={t.id}>
-        <div className="transaction-heading">
-          <div>
-            <strong>{t.merchant_name || t.description}</strong>
-            {t.merchant_name && t.merchant_name !== t.description && (
-              <p>{t.description}</p>
-            )}
-          </div>
-          <b className={t.direction === "income" ? "positive" : "negative"}>
-            {t.direction === "income" ? "+" : "−"}{" "}
-            {t.currency === "BRL"
-              ? brl(t.amount)
-              : new Intl.NumberFormat("pt-BR", {
-                  style: "currency",
-                  currency: t.currency,
-                }).format(Number(t.amount))}
-          </b>
-        </div>
-        <dl className="transaction-details">
-          <div>
-            <dt>Conta / cartão</dt>
-            <dd>{accountName}</dd>
-          </div>
-          <div>
-            <dt>Data</dt>
-            <dd>
-              {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(
-                new Date(t.occurred_at),
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>
-              {t.needs_review
-                ? "Para revisar"
-                : {
-                    posted: "Confirmada",
-                    pending: "Pendente",
-                    cancelled: "Cancelada",
-                  }[t.status]}
-              {t.source === "projection" ? " · Projeção" : ""}
-            </dd>
-          </div>
-          {t.total_installments && (
-            <div>
-              <dt>Parcela</dt>
-              <dd>
-                {t.installment_number}/{t.total_installments}
-                {t.defer_to_next_month ? " · Próximo ciclo" : ""}
-              </dd>
-            </div>
-          )}
-        </dl>
-        <label className="transaction-category">
-          Categoria
-          <select
-            aria-label={`Categoria de ${t.description}`}
-            value={t.category_id || ""}
-            disabled={panco.savingCategories.includes(t.id)}
-            onChange={(e) =>
-              panco
-                .categorize(t.id, e.target.value)
-                .catch((e) => panco.setError(e.message))
-            }
-          >
-            <option value="" disabled>
-              Sem categoria
-            </option>
-            {data.categories
-              .filter(
-                (c) =>
-                  !c.archived_at &&
-                  (c.kind === t.direction || c.kind === "both"),
-              )
-              .map((c) => (
-                <option value={c.id} key={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </select>
-        </label>
-      </article>
-    );
+    const bank = data.accounts.find(a => a.id === t.account_id);
+    const card = data.cards.find(c => c.id === t.card_id);
+    const accountName = bank?.name || card?.name || "Conta não informada";
+    const bankName = card ? cardBankName(card,data.accounts) : accountName;
+    const category = data.categories.find(c => c.id === t.category_id);
+    const state = t.needs_review ? "Para revisar" : {posted:"Confirmada",pending:"Pendente",cancelled:"Cancelada"}[t.status];
+    return <article className="ledger-row" key={t.id}>
+      <div className="ledger-description"><span className={`ledger-icon ${t.direction}`} aria-hidden="true">{categoryEmoji(category?.name || "",category?.icon)}</span><div><strong>{t.merchant_name || t.description}</strong><small>{state}{t.source === "projection" ? " · Projeção" : ""}{t.total_installments ? ` · Parcela ${t.installment_number}/${t.total_installments}` : ""}</small></div></div>
+      <div className="ledger-category"><select aria-label={`Categoria de ${t.description}`} value={t.category_id || ""} disabled={panco.savingCategories.includes(t.id)} onChange={e => panco.categorize(t.id,e.target.value).catch(e=>panco.setError(e.message))}>
+        <option value="" disabled>🏷️ Sem categoria</option>
+        {data.categories.filter(c => !c.archived_at && (c.kind === t.direction || c.kind === "both")).map(c => <option value={c.id} key={c.id}>{categoryEmoji(c.name,c.icon)} {c.name}</option>)}
+      </select></div>
+      <div className="ledger-account" title={accountName}><AccountLogo name={bankName}/><span>{bankName}</span></div>
+      <time className="ledger-date" dateTime={t.occurred_at}>{new Intl.DateTimeFormat("pt-BR",{timeZone:"UTC"}).format(new Date(t.occurred_at))}</time>
+      <b className={`ledger-value ${t.direction === "income" ? "positive" : "negative"}`}>{t.direction === "income" ? "+" : "−"}{new Intl.NumberFormat("pt-BR",{style:"currency",currency:t.currency}).format(Number(t.amount))}</b>
+      <details className="ledger-more"><summary aria-label={`Detalhes de ${t.description}`}><MoreVertical size={17}/></summary><div><strong>{t.description}</strong><span>{accountName}</span><span>{state}{t.defer_to_next_month ? " · Próximo ciclo" : ""}</span></div></details>
+    </article>;
   }
   return (
     <section className="transactions-page">
+      <div className="ledger-summary">
+        <div><Hash size={20}/><span>Total<strong>{count}</strong></span></div>
+        <div><TrendingDown size={20} className="negative"/><span>Despesas<strong className="negative">{brl(decimal(expense))}</strong></span></div>
+        <div><TrendingUp size={20} className="positive"/><span>Receitas<strong className="positive">{brl(decimal(income))}</strong></span></div>
+        <div><ArrowLeftRight size={20}/><span>Saldo das transações<strong className={income-expense < 0n ? "negative" : "positive"}>{brl(decimal(income-expense))}</strong></span></div>
+      </div>
+      <p className="ledger-summary-note">Valores em reais dos filtros atuais, incluindo pendentes. Projeções, canceladas e transferências não entram nos valores. Este saldo não é o saldo bancário.</p>
       <div className="card transaction-controls">
         <div className="filters">
           <label className="search">
@@ -196,9 +137,10 @@ export function Transactions({ panco }: { panco: PancoController }) {
           valores preservados.
         </p>
       </div>
-      <div className="transaction-list">
+      <div className="ledger-list">
+        <div className="ledger-columns" aria-hidden="true"><span>Descrição</span><span>Categoria</span><span>Conta</span><span>Data</span><span>Valor</span><span/></div>
         {groups.map((group) => (
-          <div className="transaction-group" key={group[0].id}>
+          <div className="ledger-group" key={group[0].id}>
             {group.length > 1 && (
               <div className="similar-notice">
                 {group.length} lançamentos semelhantes · todos contam nos totais

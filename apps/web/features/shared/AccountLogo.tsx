@@ -38,3 +38,8 @@ export function AccountLogo({ name }: { name: string }) {
     </span>
   );
 }
+
+export function cardBankName(card: {name: string; connection_id?: string | null; payment_account_id?: string | null}, accounts: {id:string;name:string;kind:string;connection_id?:string|null}[]) {
+  const issuer = card.connection_id && accounts.find(a => a.connection_id === card.connection_id && a.kind !== "investment");
+  return issuer ? issuer.name : card.name;
+}
