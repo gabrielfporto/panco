@@ -15,16 +15,8 @@ import { brl, shortDate, today } from "../shared/format";
 
 function hasInvoiceActivity(invoice: {
   remaining_due: string | number;
-  reported_total: string | number | null;
-  estimated_total: string | number;
-  total_paid: string | number;
 }) {
-  return [
-    invoice.remaining_due,
-    invoice.reported_total,
-    invoice.estimated_total,
-    invoice.total_paid,
-  ].some((value) => value != null && Math.abs(Number(value)) > 0.005);
+  return Number(invoice.remaining_due) > 0.005;
 }
 
 function invoiceStatus(invoice: {
