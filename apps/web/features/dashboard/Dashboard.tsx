@@ -57,18 +57,24 @@ export function Dashboard({
         label: "Conta bancária",
       })),
     ...data.invoices
-      .filter((i) => Number(i.remaining_due) > 0)
+      .filter(
+        (i) =>
+          Number(i.remaining_due) > 0 &&
+          (i.manual_due_date || i.due_date) >=
+            today().slice(0, 7) + "-01",
+      )
       .map((i) => ({
         id: i.id,
         name:
           "Fatura · " +
           (data.cards.find((c) => c.id === i.card_id)?.name || "Cartão"),
-        date: i.due_date,
+        date: i.manual_due_date || i.due_date,
         amount: i.remaining_due,
         income: false,
         label:
-          (i.due_date < today() ? "Vencida · " : "Fatura de ") +
-          monthLabel(i.due_date),
+          ((i.manual_due_date || i.due_date) < today()
+            ? "Vencida · "
+            : "Fatura de ") + monthLabel(i.manual_due_date || i.due_date),
       })),
   ]
     .sort((a, b) => a.date.localeCompare(b.date))

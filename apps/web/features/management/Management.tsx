@@ -11,12 +11,24 @@ import {
 import type { PancoController } from "../../../../packages/react-features/src/use-panco";
 import type { Feature } from "../../../../packages/react-features/src/types";
 import { categoryEmoji } from "../../../../packages/react-features/src/category-icons";
-import { brl, shortDate, today } from "../shared/format";
+import { brl, fullDate, shortDate, today } from "../shared/format";
+
+function effectiveInvoiceDate(invoice: {
+  due_date: string;
+  manual_due_date?: string | null;
+}) {
+  return invoice.manual_due_date || invoice.due_date;
+}
 
 function hasInvoiceActivity(invoice: {
   remaining_due: string | number;
+  due_date: string;
+  manual_due_date?: string | null;
 }) {
-  return Number(invoice.remaining_due) > 0.005;
+  return (
+    Number(invoice.remaining_due) > 0.005 &&
+    effectiveInvoiceDate(invoice) >= today().slice(0, 7) + "-01"
+  );
 }
 
 function invoiceStatus(invoice: {
@@ -26,6 +38,7 @@ function invoiceStatus(invoice: {
   reported_total: string | number | null;
   estimated_total: string | number;
   total_paid: string | number;
+  manual_due_date?: string | null;
 }) {
   const total = Math.max(
     Number(invoice.reported_total || 0),
@@ -34,8 +47,9 @@ function invoiceStatus(invoice: {
   const remaining = Number(invoice.remaining_due || 0);
 
   if (total > 0 && remaining <= 0.005) return "Paga";
-  if (invoice.due_date < today() && remaining > 0.005) return "Vencida";
-  if (invoice.due_date > today()) return "Futura";
+  const dueDate = effectiveInvoiceDate(invoice);
+  if (dueDate < today() && remaining > 0.005) return "Vencida";
+  if (dueDate > today()) return "Futura";
 
   return (
     { FUTURE: "Futura", OPEN: "Aberta", CLOSED: "Fechada" }[
@@ -65,7 +79,9 @@ export function Management({
   const visibleInvoices = d.invoices
     .filter(hasInvoiceActivity)
     .slice()
-    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+    .sort((a, b) =>
+      effectiveInvoiceDate(a).localeCompare(effectiveInvoiceDate(b)),
+    );
   if (feature === "cards")
     return (
       <>
@@ -123,6 +139,9 @@ export function Management({
                   Vencimento<strong>Dia {c.due_day || "—"}</strong>
                 </span>
               </div>
+              {c.dates_manually_set && (
+                <p className="fine-print">Datas definidas por você.</p>
+              )}
               {(!c.closing_day || !c.due_day) && (
                 <p className="notice">
                   Informe as datas para habilitar as projeções.
@@ -146,16 +165,25 @@ export function Management({
                       {d.cards.find((c) => c.id === i.card_id)?.name}
                     </strong>
                     <small>
-                      Vence em {shortDate(i.due_date)} ·{" "}
-                      {i.reported_total == null
-                        ? "Estimativa"
-                        : "Total informado pelo banco"}
+                      Vence em {fullDate(effectiveInvoiceDate(i))} ·{" "}
+                      {i.manual_total != null || i.manual_due_date
+                        ? "Ajustada por você"
+                        : i.source === "pluggy"
+                          ? "Informada pela integração"
+                          : "Estimativa de parcelas"}
                     </small>
                   </div>
                   <span className="tag">
                     {invoiceStatus(i)}
                   </span>
                   <b>{brl(i.remaining_due)}</b>
+                  <button
+                    className="icon-button"
+                    aria-label={`Ajustar fatura de ${d.cards.find((c) => c.id === i.card_id)?.name || "cartão"}`}
+                    onClick={() => open("invoice", i.id)}
+                  >
+                    <Pencil size={16} />
+                  </button>
                 </div>
               ))
           ) : (

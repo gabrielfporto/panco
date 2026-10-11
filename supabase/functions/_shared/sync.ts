@@ -103,16 +103,32 @@ export async function importAccounts(db: DB, api: Pluggy, c: Connection) {
       );
     else if (a.type === "CREDIT") {
       const credit = a.creditData || {};
+      const current = check(
+        await db
+          .from("cards")
+          .select("dates_manually_set")
+          .eq("connection_id", c.id)
+          .eq("pluggy_account_id", a.id)
+          .maybeSingle(),
+      );
+      const providerClosingDay = credit.balanceCloseDate
+        ? Number(credit.balanceCloseDate.slice(8, 10))
+        : null;
+      const providerDueDay = credit.balanceDueDate
+        ? Number(credit.balanceDueDate.slice(8, 10))
+        : null;
       const card: Record<string, unknown> = {
         ...base,
         brand: credit.brand || null,
         total_limit: credit.creditLimit ?? null,
         available_limit: credit.availableCreditLimit ?? null,
+        provider_closing_day: providerClosingDay,
+        provider_due_day: providerDueDay,
       };
-      if (credit.balanceCloseDate)
-        card.closing_day = Number(credit.balanceCloseDate.slice(8, 10));
-      if (credit.balanceDueDate)
-        card.due_day = Number(credit.balanceDueDate.slice(8, 10));
+      if (!current?.dates_manually_set) {
+        if (providerClosingDay) card.closing_day = providerClosingDay;
+        if (providerDueDay) card.due_day = providerDueDay;
+      }
       if (a.number && /\d{4}$/.test(a.number))
         card.last_four = a.number.slice(-4);
       check(

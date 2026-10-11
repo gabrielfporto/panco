@@ -31,7 +31,7 @@ export function Calendar({ panco }: { panco: PancoController }) {
       })),
     ...panco.data.invoices.map((i) => ({
       id: i.id,
-      date: i.due_date,
+      date: i.manual_due_date || i.due_date,
       name:
         "Fatura · " +
         (panco.data.cards.find((c) => c.id === i.card_id)?.name || "Cartão"),

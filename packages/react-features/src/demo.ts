@@ -184,6 +184,7 @@ export function demoData(): PancoData {
         due_date: date(8),
         closing_date: date(1),
         status: "CLOSED",
+        source: "pluggy",
         remaining_due: "2820.00",
         reported_total: "2820.00",
         estimated_total: "129.90",

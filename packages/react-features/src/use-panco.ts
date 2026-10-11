@@ -376,6 +376,7 @@ export function usePanco(client: SupabaseClient | null) {
       | "categories"
       | "subscriptions"
       | "cards"
+      | "invoices"
       | "accounts"
       | "investment_income",
     values: Record<string, unknown>,

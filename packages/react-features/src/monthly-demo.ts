@@ -84,7 +84,7 @@ export function demoMonthlyOverview(
     )
     .reduce((n, a) => n + cents(a.current_balance), 0n);
   const invoiceDue = data.invoices
-    .filter((i) => i.due_date.slice(0, 7) === month)
+    .filter((i) => (i.manual_due_date || i.due_date).slice(0, 7) === month)
     .reduce((n, i) => n + cents(i.remaining_due), 0n);
   const remainingIncome = remaining("income");
   const remainingExpense = remaining("expense");

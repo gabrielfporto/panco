@@ -28,6 +28,8 @@ export function Editor({
         ? d.subscriptions
         : type === "card"
           ? d.cards
+          : type === "invoice"
+            ? d.invoices
           : []
   ).find((x) => x.id === id) as Record<string, unknown> | undefined;
   useEffect(() => {
@@ -87,8 +89,18 @@ export function Editor({
           name: s("name"),
           closing_day: Number(s("closing")),
           due_day: Number(s("due")),
+          dates_manually_set: true,
           payment_account_id: s("payment") || null,
           currency: "BRL",
+        });
+      if (type === "invoice")
+        await panco.save("invoices", {
+          id,
+          manual_total: f.has("automatic") ? null : s("amount"),
+          manual_due_date: f.has("automatic") ? null : s("date"),
+          manual_updated_at: f.has("automatic")
+            ? null
+            : new Date().toISOString(),
         });
       if (type === "account") await panco.createAccount(s("name"), s("amount"));
       if (type === "income")
@@ -112,6 +124,7 @@ export function Editor({
     category: id ? "Editar categoria" : "Nova categoria",
     subscription: id ? "Gerenciar assinatura" : "Nova assinatura",
     card: "Configurar cartão",
+    invoice: "Ajustar fatura",
     account: "Nova conta",
     income: "Registrar provento",
   };
@@ -124,7 +137,7 @@ export function Editor({
         </button>
       </div>
       <form onSubmit={submit}>
-        {type !== "income" && (
+        {!["income", "invoice"].includes(type) && (
           <label>
             Nome / descrição
             <input
@@ -135,31 +148,50 @@ export function Editor({
             />
           </label>
         )}
-        {["transaction", "subscription", "account", "income"].includes(
-          type,
-        ) && (
+        {[
+          "transaction",
+          "subscription",
+          "account",
+          "income",
+          "invoice",
+        ].includes(type) && (
           <label>
-            {type === "transaction"
-              ? "Valor da parcela ou compra"
-              : "Valor (R$)"}
+            {type === "invoice"
+              ? "Valor correto da fatura (R$)"
+              : type === "transaction"
+                ? "Valor da parcela ou compra"
+                : "Valor (R$)"}
             <input
               name="amount"
               type="number"
               min="0.01"
               step="0.01"
               required
-              defaultValue={field("amount")}
+              defaultValue={
+                type === "invoice"
+                  ? field(
+                      "manual_total",
+                      field("reported_total", field("estimated_total")),
+                    )
+                  : field("amount")
+              }
             />
           </label>
         )}
-        {["transaction", "subscription", "income"].includes(type) && (
+        {["transaction", "subscription", "income", "invoice"].includes(
+          type,
+        ) && (
           <label>
-            Data
+            {type === "invoice" ? "Vencimento correto" : "Data"}
             <input
               name="date"
               type="date"
               required
-              defaultValue={field("next_due_date", today())}
+              defaultValue={
+                type === "invoice"
+                  ? field("manual_due_date", field("due_date", today()))
+                  : field("next_due_date", today())
+              }
             />
           </label>
         )}
@@ -377,6 +409,21 @@ export function Editor({
               ))}
             </select>
           </label>
+        )}
+        {type === "invoice" && (
+          <>
+            <p className="fine-print">
+              O ajuste prevalece sobre a integração e não modifica as compras
+              importadas.
+            </p>
+            {(existing?.manual_total != null ||
+              existing?.manual_due_date != null) && (
+              <label className="checkbox">
+                <input type="checkbox" name="automatic" /> Voltar a usar os
+                dados automáticos
+              </label>
+            )}
+          </>
         )}
         {error && (
           <p role="alert" className="form-error">

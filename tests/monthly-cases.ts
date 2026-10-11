@@ -149,6 +149,36 @@ export async function testMonthlyPlanning(db: PGlite) {
     ),
     0,
   );
+  await db.query(
+    "update invoices set manual_total=250,manual_due_date='2026-11-10',manual_updated_at=now() where id=$1",
+    [invoice.id],
+  );
+  result = (await one("select monthly_overview('2026-10-01') data")).data;
+  assert.equal(Number(result.invoice_due), 0);
+  assert.equal(Number(result.projected_cash_balance), 505);
+  result = (await one("select monthly_overview('2026-11-01') data")).data;
+  assert.equal(Number(result.invoice_due), 150);
+  assert.equal(Number(result.projected_cash_balance), 405);
+  assert.equal(
+    (
+      await one(
+        "select remaining_due from invoices where id=$1",
+        [invoice.id],
+      )
+    ).remaining_due,
+    "150.00",
+  );
+  await db.query(
+    "update cards set closing_day=20,due_day=27,dates_manually_set=true where id=$1",
+    [card.id],
+  );
+  assert.deepEqual(
+    await one(
+      "select closing_day,due_day,dates_manually_set from cards where id=$1",
+      [card.id],
+    ),
+    { closing_day: 20, due_day: 27, dates_manually_set: true },
+  );
   await assert.rejects(db.query("select monthly_overview('2026-10-02')"));
   await assert.rejects(db.query("select monthly_overview('2026-10-01','USD')"));
   await db.exec(`select set_config('request.jwt.claim.sub','${other}',false)`);

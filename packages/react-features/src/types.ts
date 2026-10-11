@@ -21,6 +21,9 @@ export interface Card {
   available_limit: Money | null;
   closing_day: number | null;
   due_day: number | null;
+  provider_closing_day?: number | null;
+  provider_due_day?: number | null;
+  dates_manually_set?: boolean;
   payment_account_id: string | null;
   currency: string;
 }
@@ -60,10 +63,14 @@ export interface Invoice {
   id: string;
   card_id: string;
   due_date: string;
+  manual_due_date?: string | null;
   closing_date: string | null;
   status: string;
+  source: "estimated" | "pluggy" | "manual";
   remaining_due: Money;
   reported_total: Money | null;
+  manual_total?: Money | null;
+  manual_updated_at?: string | null;
   estimated_total: Money;
   total_paid: Money;
 }
