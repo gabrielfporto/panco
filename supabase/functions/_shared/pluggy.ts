@@ -1,8 +1,39 @@
 import { env, HttpError } from './http.ts';
-import {
-  nextTransactionPath,
-  type PluggyTransaction,
-} from '../../../packages/core/src/features/transactions/pluggy.ts';
+export interface PluggyTransaction {
+  id: string;
+  accountId: string;
+  date: string;
+  amount: number | string;
+  amountInAccountCurrency?: number | string | null;
+  description: string;
+  currencyCode: string;
+  status: "PENDING" | "POSTED";
+  type?: string;
+  updatedAt?: string;
+  merchant?: { name?: string; cnpj?: string } | null;
+  paymentData?: { paymentMethod?: string } | null;
+  creditCardMetadata?: {
+    installmentNumber?: number;
+    totalInstallments?: number;
+    purchaseDate?: string;
+    billId?: string;
+    billForecastDate?: string;
+    billClosingDate?: string;
+    cardNumber?: string;
+  } | null;
+}
+function nextTransactionPath(next: string, accountId: string): string {
+  if (!next.startsWith('?') || next.includes('#'))
+    throw new Error('Cursor inválido');
+  const params = new URLSearchParams(next);
+  if (
+    params.get('accountId') !== accountId ||
+    params.getAll('accountId').length !== 1 ||
+    !params.get('after')
+  )
+    throw new Error('Cursor fora da conta');
+  return '/v2/transactions' + next;
+}
 let cached: { key: string; expires: number } | undefined;
 export class Pluggy {
   constructor(private transport: typeof fetch = fetch) {}

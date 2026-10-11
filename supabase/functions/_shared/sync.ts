@@ -1,10 +1,89 @@
 import { admin, check, env, HttpError, ownerId, syncStage } from "./http.ts";
-import { Pluggy } from "./pluggy.ts";
-import {
-  normalizeTransaction,
-  type PluggyTransaction,
-} from "../../../packages/core/src/features/transactions/pluggy.ts";
-import { cents, decimal } from "../../../packages/core/src/money.ts";
+import { Pluggy, type PluggyTransaction } from "./pluggy.ts";
+function cents(value: string | number): bigint {
+  const s = String(value);
+  if (!/^-?\d+(\.\d{1,2})?$/.test(s))
+    throw new Error(`Valor monetário inválido: ${s}`);
+  const negative = s.startsWith("-");
+  const [whole, fraction = ""] = s.replace("-", "").split(".");
+  const result = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+  return negative ? -result : result;
+}
+function decimal(value: bigint): string {
+  const absolute = value < 0n ? -value : value;
+  return `${value < 0n ? "-" : ""}${absolute / 100n}.${String(absolute % 100n).padStart(2, "0")}`;
+}
+function dateOnly(value: string): string {
+  const day = value.slice(0, 10);
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    new Date(`${day}T12:00:00Z`).toISOString().slice(0, 10) !== day
+  )
+    throw new Error("Data inválida");
+  return day;
+}
+const merchantKey = (name: string) =>
+  name.normalize("NFKC").toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
+function normalizeTransaction(
+  t: PluggyTransaction,
+  isCard: boolean,
+  accountCurrency = t.currencyCode,
+) {
+  if (
+    !t.id ||
+    !t.accountId ||
+    !t.description ||
+    !["PENDING", "POSTED"].includes(t.status)
+  )
+    throw new Error("Transação Pluggy inválida");
+  dateOnly(t.date);
+  const signed = cents(t.amount);
+  const foreign = t.currencyCode !== accountCurrency;
+  if (foreign && t.amountInAccountCurrency == null)
+    throw new Error("Valor convertido da transação não informado pela Pluggy");
+  const booked = foreign ? cents(t.amountInAccountCurrency!) : signed;
+  const meta = t.creditCardMetadata;
+  const n = meta?.installmentNumber,
+    total = meta?.totalInstallments;
+  const valid =
+    Number.isInteger(n) && Number.isInteger(total) && n! >= 1 && n! <= total!;
+  const name = t.merchant?.name?.trim() || null;
+  const forecast = meta?.billForecastDate;
+  const forecastMonth =
+    forecast && /^\d{4}-\d{2}$/.test(forecast)
+      ? dateOnly(`${forecast}-01`)
+      : null;
+  return {
+    pluggy_transaction_id: t.id,
+    occurred_at: t.date,
+    description: t.description,
+    merchant_name: name,
+    merchant_key: merchantKey(name || t.description),
+    amount: decimal(booked < 0n ? -booked : booked),
+    direction: (isCard ? signed >= 0n : signed < 0n) ? "expense" : "income",
+    currency: accountCurrency,
+    original_currency: foreign ? t.currencyCode : null,
+    original_amount: foreign ? decimal(signed < 0n ? -signed : signed) : null,
+    status: t.status === "POSTED" ? "posted" : "pending",
+    provider_status: t.status,
+    payment_method: t.paymentData?.paymentMethod || null,
+    kind:
+      t.paymentData?.paymentMethod === "PAGAMENTO_FATURA"
+        ? "invoice_payment"
+        : "regular",
+    installment_number: valid ? n : null,
+    total_installments: valid ? total : null,
+    provider_updated_at: t.updatedAt || null,
+    source: "pluggy",
+    purchase_date: meta?.purchaseDate ? dateOnly(meta.purchaseDate) : null,
+    pluggy_bill_id: meta?.billId || null,
+    bill_forecast_month: forecastMonth,
+    bill_forecast_date: forecast && !forecastMonth ? dateOnly(forecast) : null,
+    bill_closing_date: meta?.billClosingDate
+      ? dateOnly(meta.billClosingDate)
+      : null,
+  };
+}
 type DB = ReturnType<typeof admin>;
 export interface Connection {
   id: string;
