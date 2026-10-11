@@ -157,8 +157,8 @@ export async function testMonthlyPlanning(db: PGlite) {
   assert.equal(Number(result.invoice_due), 0);
   assert.equal(Number(result.projected_cash_balance), 505);
   result = (await one("select monthly_overview('2026-11-01') data")).data;
-  assert.equal(Number(result.invoice_due), 150);
-  assert.equal(Number(result.projected_cash_balance), 405);
+  assert.equal(Number(result.invoice_due), 250);
+  assert.equal(Number(result.projected_cash_balance), 305);
   assert.equal(
     (
       await one(
@@ -166,7 +166,7 @@ export async function testMonthlyPlanning(db: PGlite) {
         [invoice.id],
       )
     ).remaining_due,
-    "150.00",
+    "250.00",
   );
   await db.query(
     "update cards set closing_day=20,due_day=27,dates_manually_set=true where id=$1",

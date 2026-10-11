@@ -169,10 +169,7 @@ export function Editor({
               required
               defaultValue={
                 type === "invoice"
-                  ? field(
-                      "manual_total",
-                      field("reported_total", field("estimated_total")),
-                    )
+                  ? field("manual_total", field("remaining_due"))
                   : field("amount")
               }
             />
